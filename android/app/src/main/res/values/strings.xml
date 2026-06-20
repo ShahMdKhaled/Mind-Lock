@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">MindLock uses this service to detect and block Reels/Shorts on social media and track your scrolling habits to help you stay focused.</string>
+</resources>
