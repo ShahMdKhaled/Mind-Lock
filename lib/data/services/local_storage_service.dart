@@ -31,6 +31,9 @@ class LocalStorageService {
       appLimits[package] = prefs.getInt('${AppConstants.keyAppLimitMinsPrefix}$package') ?? 0;
     }
 
+    final strictModeCountdownStartStr = prefs.getString(AppConstants.keyStrictModeCountdownStart);
+    final strictModeDelayLockedUntilStr = prefs.getString(AppConstants.keyStrictModeDelayLockedUntil);
+
     return AppSettings(
       reelsBlockerEnabled: prefs.getBool(AppConstants.keyReelsBlockerEnabled) ?? false,
       reelsBlockedPackages: reelsBlockedJson,
@@ -49,6 +52,11 @@ class LocalStorageService {
       blockedApps: blockedAppsJson,
       appLimitsEnabled: appLimitsEnabled,
       appLimits: appLimits,
+      strictModeEnabled: prefs.getBool(AppConstants.keyStrictModeEnabled) ?? false,
+      strictModeDelayMinutes: prefs.getInt(AppConstants.keyStrictModeDelayMinutes) ?? 5,
+      strictModeCountdownStart: strictModeCountdownStartStr != null ? DateTime.tryParse(strictModeCountdownStartStr) : null,
+      targetFeatureToDisable: prefs.getString(AppConstants.keyTargetFeatureToDisable),
+      strictModeDelayLockedUntil: strictModeDelayLockedUntilStr != null ? DateTime.tryParse(strictModeDelayLockedUntilStr) : null,
     );
   }
 
@@ -79,6 +87,24 @@ class LocalStorageService {
     await prefs.setStringList(AppConstants.keyAppLimitPackages, settings.appLimits.keys.toList());
     for (final entry in settings.appLimits.entries) {
       await prefs.setInt('${AppConstants.keyAppLimitMinsPrefix}${entry.key}', entry.value);
+    }
+
+    await prefs.setBool(AppConstants.keyStrictModeEnabled, settings.strictModeEnabled);
+    await prefs.setInt(AppConstants.keyStrictModeDelayMinutes, settings.strictModeDelayMinutes);
+    if (settings.strictModeCountdownStart != null) {
+      await prefs.setString(AppConstants.keyStrictModeCountdownStart, settings.strictModeCountdownStart!.toIso8601String());
+    } else {
+      await prefs.remove(AppConstants.keyStrictModeCountdownStart);
+    }
+    if (settings.targetFeatureToDisable != null) {
+      await prefs.setString(AppConstants.keyTargetFeatureToDisable, settings.targetFeatureToDisable!);
+    } else {
+      await prefs.remove(AppConstants.keyTargetFeatureToDisable);
+    }
+    if (settings.strictModeDelayLockedUntil != null) {
+      await prefs.setString(AppConstants.keyStrictModeDelayLockedUntil, settings.strictModeDelayLockedUntil!.toIso8601String());
+    } else {
+      await prefs.remove(AppConstants.keyStrictModeDelayLockedUntil);
     }
   }
 

@@ -7,7 +7,7 @@ class StudyModeService {
   StudyModeService._();
 
   static const MethodChannel _channel =
-      MethodChannel('com.example.mindlock/permissions');
+      MethodChannel('com.noorsoft.mindlock/permissions');
   final VolumeController _volumeController = VolumeController.instance;
   double _originalVolume = 0.5;
 

@@ -1,4 +1,4 @@
-package com.example.mindlock
+package com.noorsoft.mindlock
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
@@ -14,6 +14,31 @@ class MindLockAccessibilityService : AccessibilityService() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var isBlockingActive = false
+    
+    // Performance Caching
+    private var lastPrefCacheTime = 0L
+    private var cachedBreakEnabled = false
+    private var cachedStudyModeEnabled = false
+    private var cachedUninstallProtectionEnabled = false
+    private var cachedAppLimitsEnabled = false
+    private var cachedReelsEnabled = false
+    private var cachedBlockedPackages = listOf<String>()
+    private var cachedAppLimitPackages = listOf<String>()
+
+    private fun updatePrefsCache(prefs: android.content.SharedPreferences) {
+        val now = System.currentTimeMillis()
+        if (now - lastPrefCacheTime < 2000) return // Update at most every 2 seconds
+        lastPrefCacheTime = now
+
+        cachedBreakEnabled = try { prefs.getBoolean("flutter.break_enabled", false) } catch (e: Exception) { false }
+        cachedStudyModeEnabled = try { prefs.getBoolean("flutter.study_mode_enabled", false) } catch (e: Exception) { false }
+        cachedUninstallProtectionEnabled = try { prefs.getBoolean("flutter.uninstall_protection_enabled", false) } catch (e: Exception) { false }
+        cachedAppLimitsEnabled = try { prefs.getBoolean("flutter.app_limits_enabled", false) } catch (e: Exception) { false }
+        cachedReelsEnabled = try { prefs.getBoolean("flutter.reels_blocker_enabled", false) } catch (e: Exception) { false }
+        
+        cachedBlockedPackages = getStringListFromPrefs(prefs, "flutter.reels_blocked_packages")
+        cachedAppLimitPackages = getStringListFromPrefs(prefs, "flutter.app_limit_packages")
+    }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
@@ -26,17 +51,50 @@ class MindLockAccessibilityService : AccessibilityService() {
         if (!isRelevantEvent) return
 
         val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+        updatePrefsCache(prefs)
+        
+        // --- App Time Break Reminder ---
+        if (cachedBreakEnabled && packageName.lowercase() != "com.noorsoft.mindlock") {
+            val breakIntervalMins = try {
+                prefs.getLong("flutter.break_interval_minutes", 20L)
+            } catch (e: Exception) {
+                try {
+                    prefs.getInt("flutter.break_interval_minutes", 20).toLong()
+                } catch (e2: Exception) {
+                    20L
+                }
+            }
+            
+            // In test mode: treat minutes as seconds for fast testing!
+            val breakIntervalMs = breakIntervalMins * 1000
+            val lastBreakTime = prefs.getLong("flutter.last_break_time_ms", 0L)
+            val now = System.currentTimeMillis()
+            
+            if (lastBreakTime == 0L) {
+                prefs.edit().putLong("flutter.last_break_time_ms", now).apply()
+            } else if (now - lastBreakTime >= breakIntervalMs) {
+                prefs.edit().putLong("flutter.last_break_time_ms", now).apply()
+                prefs.edit().putString("flutter.active_overlay_type", "break").apply()
+                
+                Log.d("MindLock", "Break Time reached - showing popup")
+                
+                handler.post {
+                    try {
+                        val intent = Intent(this, ReelsBlockActivity::class.java)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        startActivity(intent)
+                    } catch (e: Exception) {}
+                }
+                return
+            }
+        }
+        // --- End App Time Break Reminder ---
         
         // --- Study Mode Blocking ---
-        val studyModeEnabled = try {
-            prefs.getBoolean("flutter.study_mode_enabled", false)
-        } catch (e: Exception) {
-            false
-        }
-
-        if (studyModeEnabled) {
+        if (cachedStudyModeEnabled) {
             val lowerPkg = packageName.lowercase()
-            val isAllowedApp = lowerPkg == "com.example.mindlock" ||
+            val isAllowedApp = lowerPkg == "com.noorsoft.mindlock" ||
                     lowerPkg.contains("launcher") ||
                     lowerPkg.contains("systemui") ||
                     lowerPkg.contains("dialer") ||
@@ -47,7 +105,7 @@ class MindLockAccessibilityService : AccessibilityService() {
                     lowerPkg.contains("com.android.settings")
 
             if (!isAllowedApp) {
-                Log.d("MindLock", "Study Mode Active - Blocking App: \$packageName")
+                Log.d("MindLock", "Study Mode Active - Blocking App: $packageName")
                 performGlobalAction(GLOBAL_ACTION_HOME)
                 performGlobalAction(GLOBAL_ACTION_BACK)
                 
@@ -62,13 +120,7 @@ class MindLockAccessibilityService : AccessibilityService() {
         // --- End Study Mode Blocking ---
         
         // --- Uninstall Protection Logic ---
-        val uninstallProtectionEnabled = try {
-            prefs.getBoolean("flutter.uninstall_protection_enabled", false)
-        } catch (e: Exception) {
-            false
-        }
-
-        if (uninstallProtectionEnabled) {
+        if (cachedUninstallProtectionEnabled && packageName.lowercase() != "com.noorsoft.mindlock") {
             val rootNode = rootInActiveWindow
             if (rootNode != null) {
                 if (checkForUninstallAttempt(rootNode, packageName)) {
@@ -89,14 +141,8 @@ class MindLockAccessibilityService : AccessibilityService() {
         // --- End Uninstall Protection ---
         
         // --- App Use Limit Blocking ---
-        val appLimitsEnabled = try {
-            prefs.getBoolean("flutter.app_limits_enabled", false)
-        } catch (e: Exception) {
-            false
-        }
-
-        if (appLimitsEnabled) {
-            val limitedPackages = getStringListFromPrefs(prefs, "flutter.app_limit_packages")
+        if (cachedAppLimitsEnabled) {
+            val limitedPackages = cachedAppLimitPackages
 
             if (limitedPackages.contains(packageName)) {
                 val limitMins = try {
@@ -134,16 +180,10 @@ class MindLockAccessibilityService : AccessibilityService() {
         }
         // --- End App Use Limit Blocking ---
         
-        val reelsEnabled = try {
-            prefs.getBoolean("flutter.reels_blocker_enabled", false)
-        } catch (e: Exception) {
-            false
-        }
-        
-        if (!reelsEnabled) return
+        if (!cachedReelsEnabled) return
 
         // Check if this specific package is blocked
-        val blockedPackages = getStringListFromPrefs(prefs, "flutter.reels_blocked_packages")
+        val blockedPackages = cachedBlockedPackages
         val isBlocked = if (blockedPackages.isNotEmpty()) {
             blockedPackages.contains(packageName)
         } else {
@@ -151,21 +191,42 @@ class MindLockAccessibilityService : AccessibilityService() {
         }
 
         if (isBlocked) {
+            // Instantly block TikTok without waiting for UI nodes to load
+            val lowerPkg = packageName.lowercase()
+            if (lowerPkg.contains("tiktok") || lowerPkg.contains("musically") || lowerPkg.contains("trill")) {
+                Log.d("MindLock", "TikTok is entirely blocked")
+                blockContent(aggressiveBlock = true)
+                return
+            }
+
             val rootNode = rootInActiveWindow ?: return
             
             // Exclusion: Messenger and direct typing
             if (packageName.contains("messenger", true)) return
 
             val analysis = performUIAnalysis(rootNode, packageName)
+            val isInstagram = packageName.contains("instagram", ignoreCase = true)
             
-            if (analysis.isCommentInputActive || analysis.isCommentSectionActive) {
+            // For Facebook and others: Restoring previous logic.
+            // If comment input is active, abort blocking to allow typing.
+            if (!isInstagram) {
+                if (analysis.isCommentInputActive || analysis.isCommentSectionActive) {
+                    return
+                }
+            }
+
+            // Reels block takes precedence for Instagram! 
+            if (analysis.isReel || analysis.isYouTubeShorts) {
+                Log.d("MindLock", "Reels/Shorts blocked in $packageName")
+                blockContent(aggressiveBlock = false)
                 return
             }
 
-            if (analysis.isReel || analysis.isYouTubeShorts) {
-                Log.d("MindLock", "Reels/Shorts blocked in $packageName")
-                blockContent()
-                return
+            // For Instagram: Otherwise, allow typing in normal non-Reels sections
+            if (isInstagram) {
+                if (analysis.isCommentInputActive || analysis.isCommentSectionActive) {
+                    return
+                }
             }
         }
     }
@@ -199,6 +260,7 @@ class MindLockAccessibilityService : AccessibilityService() {
         "youtube" to YouTubeAnalyzer(),
         "tiktok" to TikTokAnalyzer(),
         "musically" to TikTokAnalyzer(),
+        "trill" to TikTokAnalyzer(),
         "chrome" to ChromeAnalyzer()
     )
 
@@ -209,12 +271,13 @@ class MindLockAccessibilityService : AccessibilityService() {
         val screenHeight = displayMetrics.heightPixels
 
         val isLite = packageName.lowercase().contains("lite")
+        val analyzer = analyzers.entries.find { packageName.contains(it.key) }?.value
 
-        traverseNode(rootNode, result, screenWidth, screenHeight, packageName, isLite)
+        traverseNode(rootNode, result, screenWidth, screenHeight, analyzer, isLite)
         
-        // Check for VERTICAL stack on the far right (Reels characteristic)
-        // We do this for all social media apps, not just Lite, to be more precise.
-        if (result.rightSideClickablesList.size >= 2) {
+        // Generic logic for other apps (YouTube Shorts, etc.) that rely on vertical stacks
+        // Facebook and Instagram handle their own fast detection directly in their Analyzers.
+        if (!result.isReel && result.rightSideClickablesList.size >= 2) {
             var verticalSeparationCount = 0
             val list = result.rightSideClickablesList
             // Sort by Y coordinate to check sequence
@@ -228,25 +291,11 @@ class MindLockAccessibilityService : AccessibilityService() {
                 if (diffY > 70 && diffX < 200) verticalSeparationCount++
             }
             
-            // If we have at least 2 buttons vertically stacked, it's likely a Reel/Short
             if (verticalSeparationCount >= 1 && result.rightSideClickablesList.size >= 3) {
                 result.isReel = true
             } else if (verticalSeparationCount >= 2) {
                 result.isReel = true
             }
-            
-            // New Facebook Logic (Main & Lite): 2 out of 3 buttons must be true in a stack
-            val isFB = packageName.contains("com.facebook.katana") || packageName.contains("com.facebook.lite")
-            if (isFB && !result.isReel) {
-                val foundButtonsCount = (if (result.hasLike) 1 else 0) + 
-                                       (if (result.hasComment) 1 else 0) + 
-                                       (if (result.hasShare) 1 else 0)
-                
-                if (foundButtonsCount >= 2 && verticalSeparationCount >= 1) {
-                    result.isReel = true
-                }
-            }
-
         }
 
         // Master Override: If we are on the Home page/Main Navigation, it's NOT a standalone Reel
@@ -266,7 +315,7 @@ class MindLockAccessibilityService : AccessibilityService() {
         result: UIAnalysisResult,
         screenWidth: Int,
         screenHeight: Int,
-        packageName: String,
+        analyzer: IReelsAnalyzer?,
         isLite: Boolean
     ) {
         if (!node.isVisibleToUser) return
@@ -284,15 +333,13 @@ class MindLockAccessibilityService : AccessibilityService() {
         }
 
         // 2. Dispatch to specialized "Formula" based on App (Separate Sections)
-        analyzers.entries.find { packageName.contains(it.key) }?.value?.analyze(
-            node, rect, text, desc, result, screenWidth, screenHeight
-        )
+        analyzer?.analyze(node, rect, text, desc, result, screenWidth, screenHeight)
 
         // 3. Recursive traversal
         for (i in 0 until node.childCount) {
             val child = node.getChild(i)
             child?.let {
-                traverseNode(it, result, screenWidth, screenHeight, packageName, isLite)
+                traverseNode(it, result, screenWidth, screenHeight, analyzer, isLite)
                 it.recycle() // Recycle node to prevent memory leaks and out of nodes error
             }
         }
@@ -306,14 +353,26 @@ class MindLockAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun blockContent() {
+    private fun blockContent(aggressiveBlock: Boolean = false) {
         if (isBlockingActive) return
         isBlockingActive = true
 
         Log.d("MindLock", "Blocking Reels Action")
         
-        // 1. First perform the back action
-        performGlobalAction(GLOBAL_ACTION_BACK)
+        if (aggressiveBlock) {
+            // Aggressive mode for TikTok: Home action + multiple back actions to ensure it fully closes
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            performGlobalAction(GLOBAL_ACTION_BACK)
+            handler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 100)
+            handler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 250)
+            handler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 400)
+        } else {
+            // 1. First perform the back action
+            performGlobalAction(GLOBAL_ACTION_BACK)
+        }
+
+        val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+        prefs.edit().putString("flutter.active_overlay_type", "reels").apply()
 
         // 2. Wait for 500ms, then show the Motivational Popup
         handler.postDelayed({
@@ -346,6 +405,13 @@ class MindLockAccessibilityService : AccessibilityService() {
     }
 
     private fun checkForUninstallAttempt(rootNode: AccessibilityNodeInfo, packageName: String): Boolean {
+        // Fix: Use the package name of the actual window we are inspecting to avoid timing/transition bugs
+        val actualPackage = rootNode.packageName?.toString()?.lowercase() ?: packageName.lowercase()
+        
+        // Immediately return false if the active window belongs to our own app,
+        // so we don't accidentally scan our own Uninstall Protection settings.
+        if (actualPackage == "com.noorsoft.mindlock") return false
+
         var hasMindLockText = false
         var hasDangerousAction = false
         var hasUninstallDialogText = false
@@ -391,9 +457,6 @@ class MindLockAccessibilityService : AccessibilityService() {
         traverse(rootNode)
         
         if (hasCombinedText) return true
-
-        // Use the package name of the actual window we are inspecting to avoid timing/transition bugs
-        val actualPackage = rootNode.packageName?.toString()?.lowercase() ?: packageName.lowercase()
 
         val isSettings = actualPackage.contains("settings")
         val isInstaller = actualPackage.contains("installer") || actualPackage.contains("parser") || actualPackage.contains("securitycenter")

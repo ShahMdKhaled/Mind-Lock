@@ -12,29 +12,33 @@ class PermissionScreen extends StatefulWidget {
 }
 
 class _PermissionScreenState extends State<PermissionScreen> with WidgetsBindingObserver {
+  late final PermissionViewModel _viewModel;
+
   @override
   void initState() {
     super.initState();
+    _viewModel = PermissionViewModel();
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _viewModel.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      context.read<PermissionViewModel>().checkAll(delayed: true);
+      _viewModel.checkAll(delayed: true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => PermissionViewModel(),
+    return ChangeNotifierProvider.value(
+      value: _viewModel,
       child: const _PermissionScreenContent(),
     );
   }

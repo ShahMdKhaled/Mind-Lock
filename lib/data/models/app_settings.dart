@@ -16,6 +16,11 @@ class AppSettings {
   List<String> blockedApps;
   bool appLimitsEnabled;
   Map<String, int> appLimits;
+  bool strictModeEnabled;
+  int strictModeDelayMinutes;
+  DateTime? strictModeCountdownStart;
+  String? targetFeatureToDisable;
+  DateTime? strictModeDelayLockedUntil;
 
   AppSettings({
     this.reelsBlockerEnabled = false,
@@ -35,6 +40,11 @@ class AppSettings {
     List<String>? blockedApps,
     this.appLimitsEnabled = false,
     Map<String, int>? appLimits,
+    this.strictModeEnabled = false,
+    this.strictModeDelayMinutes = 10,
+    this.strictModeCountdownStart,
+    this.targetFeatureToDisable,
+    this.strictModeDelayLockedUntil,
   })  : reelsBlockedPackages = reelsBlockedPackages ?? [],
         blockedApps = blockedApps ?? [],
         appLimits = appLimits ?? {};
@@ -45,6 +55,23 @@ class AppSettings {
     }
     final protectionEnd = uninstallProtectionStartDate!.add(const Duration(days: 30));
     return DateTime.now().isBefore(protectionEnd);
+  }
+
+  bool get isStrictModeDelayActive {
+    if (!strictModeEnabled || strictModeCountdownStart == null) return false;
+    final delayEnd = strictModeCountdownStart!.add(Duration(seconds: strictModeDelayMinutes));
+    return DateTime.now().isBefore(delayEnd);
+  }
+
+  bool get isStrictModeDelayCompleted {
+    if (!strictModeEnabled || strictModeCountdownStart == null) return false;
+    return !isStrictModeDelayActive;
+  }
+
+  Duration get strictModeDelayRemaining {
+    if (!isStrictModeDelayActive) return Duration.zero;
+    final delayEnd = strictModeCountdownStart!.add(Duration(seconds: strictModeDelayMinutes));
+    return delayEnd.difference(DateTime.now());
   }
 
   // Helper getters
@@ -72,6 +99,11 @@ class AppSettings {
     List<String>? blockedApps,
     bool? appLimitsEnabled,
     Map<String, int>? appLimits,
+    bool? strictModeEnabled,
+    int? strictModeDelayMinutes,
+    DateTime? strictModeCountdownStart,
+    String? targetFeatureToDisable,
+    DateTime? strictModeDelayLockedUntil,
   }) {
     return AppSettings(
       reelsBlockerEnabled: reelsBlockerEnabled ?? this.reelsBlockerEnabled,
@@ -91,6 +123,11 @@ class AppSettings {
       blockedApps: blockedApps ?? this.blockedApps,
       appLimitsEnabled: appLimitsEnabled ?? this.appLimitsEnabled,
       appLimits: appLimits ?? this.appLimits,
+      strictModeEnabled: strictModeEnabled ?? this.strictModeEnabled,
+      strictModeDelayMinutes: strictModeDelayMinutes ?? this.strictModeDelayMinutes,
+      strictModeCountdownStart: strictModeCountdownStart ?? this.strictModeCountdownStart,
+      targetFeatureToDisable: targetFeatureToDisable ?? this.targetFeatureToDisable,
+      strictModeDelayLockedUntil: strictModeDelayLockedUntil ?? this.strictModeDelayLockedUntil,
     );
   }
 }

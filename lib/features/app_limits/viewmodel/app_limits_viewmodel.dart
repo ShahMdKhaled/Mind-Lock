@@ -44,7 +44,7 @@ class AppLimitsViewModel extends ChangeNotifier {
     try {
       final apps = await InstalledApps.getInstalledApps(true, true);
       _installedApps = apps
-          .where((app) => app.packageName != 'com.example.mindlock')
+          .where((app) => app.packageName != 'com.noorsoft.mindlock')
           .toList();
       _installedApps
           .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -71,7 +71,38 @@ class AppLimitsViewModel extends ChangeNotifier {
         .toList();
   }
 
+  Future<bool> requestDisableFeature(String feature) async {
+    if (!_settings.strictModeEnabled) return true;
+
+    if (_settings.targetFeatureToDisable == feature && !_settings.isStrictModeDelayActive) {
+      _settings = _settings.copyWith(
+        strictModeCountdownStart: null,
+        targetFeatureToDisable: null,
+      );
+      await _settingsRepo.setStrictModeCountdownStart(null);
+      await _settingsRepo.setTargetFeatureToDisable(null);
+      notifyListeners();
+      return true;
+    }
+
+    if (_settings.targetFeatureToDisable == null) {
+      final now = DateTime.now();
+      _settings = _settings.copyWith(
+        strictModeCountdownStart: now,
+        targetFeatureToDisable: feature,
+      );
+      await _settingsRepo.setStrictModeCountdownStart(now);
+      await _settingsRepo.setTargetFeatureToDisable(feature);
+      notifyListeners();
+    }
+    return false;
+  }
+
   Future<void> toggleMasterShield(bool enabled) async {
+    if (!enabled) {
+      final allowed = await requestDisableFeature('app_limits');
+      if (!allowed) return;
+    }
     _settings = _settings.copyWith(appLimitsEnabled: enabled);
     await _settingsRepo.saveSettings(_settings);
     notifyListeners();

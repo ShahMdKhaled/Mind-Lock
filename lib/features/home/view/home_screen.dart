@@ -6,10 +6,14 @@ import '../viewmodel/home_viewmodel.dart';
 import '../../../features/reels_blocker/view/reels_blocker_screen.dart';
 import '../../../features/permissions/view/permission_screen.dart';
 import '../../study_mode/viewmodel/study_mode_viewmodel.dart';
-import '../../../data/services/permission_service.dart';
 import '../../study_mode/view/study_mode_screen.dart';
 import '../../study_mode/viewmodel/study_stats_viewmodel.dart';
 import '../../../features/app_limits/view/app_limits_screen.dart';
+import '../../settings/viewmodel/settings_viewmodel.dart';
+import '../../settings/view/uninstall_protection_screen.dart';
+import '../../settings/view/strict_mode_screen.dart';
+import '../../settings/view/app_time_breaks_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -197,8 +201,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildQuickToggles(BuildContext context) {
-    final vm = context.watch<HomeViewModel>();
+    final settingsVm = context.watch<SettingsViewModel>();
     final studyVm = context.watch<StudyModeViewModel>();
+    final settings = settingsVm.settings;
     return Column(
       children: [
         Row(
@@ -206,26 +211,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Expanded(
                 child: _buildToggleCard(
                     'Reels Blocker',
-                    vm.settings.reelsBlockerEnabled,
-                    (v) => vm.toggleReelsBlocker(v),
+                    settings.reelsBlockerEnabled,
                     AppColors.danger,
                     Icons.block)),
             const SizedBox(width: 16),
             Expanded(
-                child: _buildToggleCard('Study Mode', studyVm.isActive, (v) async {
-              if (v && !studyVm.isActive) {
-                bool granted = await studyVm.checkPermission();
-                if (!granted) {
-                  if (context.mounted) {
-                    _showPermissionDialog(context);
-                  }
-                  return;
-                }
-                studyVm.toggleSession();
-              } else if (!v && studyVm.isActive) {
-                studyVm.toggleSession();
-              }
-            }, AppColors.secondary, Icons.school)),
+                child: _buildToggleCard(
+                    'Study Mode',
+                    studyVm.isActive,
+                    AppColors.secondary,
+                    Icons.school)),
           ],
         ),
         const SizedBox(height: 16),
@@ -234,8 +229,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Expanded(
               child: _buildToggleCard(
                   'Uninstall Protect',
-                  vm.settings.uninstallProtectionEnabled,
-                  (v) => vm.toggleUninstallProtection(v),
+                  settings.uninstallProtectionEnabled,
                   AppColors.primary,
                   Icons.security),
             ),
@@ -243,10 +237,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Expanded(
               child: _buildToggleCard(
                   'App Use Limit',
-                  vm.settings.appLimitsEnabled,
-                  (v) => vm.toggleAppLimits(v),
+                  settings.appLimitsEnabled,
                   AppColors.warning,
                   Icons.hourglass_top),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildToggleCard(
+                  'Strict Mode',
+                  settings.strictModeEnabled,
+                  AppColors.warning,
+                  Icons.lock_clock),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildToggleCard(
+                  'App Time Breaks',
+                  settings.breakEnabled,
+                  AppColors.primary,
+                  Icons.coffee),
             ),
           ],
         ),
@@ -254,55 +267,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _showPermissionDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceVariant,
-        title: const Text('Permission Required',
-            style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'To mute notifications and vibrations during Study Mode, MindLock needs "Do Not Disturb" (Notification Policy) access. Please enable it in the system settings.',
-          style: TextStyle(color: AppColors.textMuted),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child:
-                const Text('Cancel', style: TextStyle(color: Colors.white54)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              PermissionService().openNotificationPolicySettings();
-            },
-            child: const Text('Open Settings',
-                style: TextStyle(color: AppColors.secondary)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggleCard(String title, bool value, Function(bool) onChanged,
-      Color accent, IconData icon) {
+  Widget _buildToggleCard(String title, bool value, Color accent, IconData icon) {
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         if (title == 'Reels Blocker') {
-          Navigator.push(
+          await Navigator.push(
               context,
               MaterialPageRoute(
                   builder: (context) => const ReelsBlockerScreen()));
         } else if (title == 'Study Mode') {
-          Navigator.push(
+          await Navigator.push(
               context,
               MaterialPageRoute(
                   builder: (context) => const StudyModeScreen()));
         } else if (title == 'App Use Limit') {
-          Navigator.push(
+          await Navigator.push(
               context,
               MaterialPageRoute(
                   builder: (context) => const AppLimitsScreen()));
+        } else if (title == 'Uninstall Protect') {
+          await Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const UninstallProtectionScreen()));
+        } else if (title == 'Strict Mode') {
+          await Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const StrictModeScreen()));
+        } else if (title == 'App Time Breaks') {
+          await Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const AppTimeBreaksScreen()));
+        }
+        
+        if (mounted) {
+          context.read<SettingsViewModel>().loadSettings();
         }
       },
       child: Container(
@@ -321,10 +322,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Icon(icon, color: value ? accent : AppColors.textMuted),
-                Switch(
-                    value: value,
-                    onChanged: onChanged,
-                    activeThumbColor: accent),
+                const Icon(Icons.arrow_forward_ios,
+                    size: 12, color: AppColors.textMuted),
               ],
             ),
             const SizedBox(height: 12),
@@ -335,19 +334,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(value ? 'Active' : 'Disabled',
-                    style: TextStyle(
-                        color: value ? accent : AppColors.textMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600)),
-                if (title == 'Reels Blocker' || title == 'App Use Limit')
-                  const Icon(Icons.arrow_forward_ios,
-                      size: 10, color: AppColors.textMuted),
-              ],
-            ),
+            Text(value ? 'Active' : 'Disabled',
+                style: TextStyle(
+                    color: value ? accent : AppColors.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
           ],
         ),
       ),

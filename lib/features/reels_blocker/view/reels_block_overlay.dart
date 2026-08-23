@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class ReelsBlockOverlay extends StatefulWidget {
   const ReelsBlockOverlay({super.key});
 
@@ -19,6 +21,7 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
   int _secondsRemaining = 10;
   late Timer _timer;
   late String _currentQuote;
+  bool _isBreak = false;
 
   final List<String> _quotes = [
     // Motivational Style
@@ -45,6 +48,7 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
   void initState() {
     super.initState();
     _currentQuote = _quotes[Random().nextInt(_quotes.length)];
+    _checkOverlayType();
     
     _controller = AnimationController(
       vsync: this,
@@ -68,6 +72,21 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
         }
       });
     });
+  }
+
+  Future<void> _checkOverlayType() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final type = prefs.getString('active_overlay_type');
+      if (type == 'break') {
+        setState(() {
+          _isBreak = true;
+          _currentQuote = "Take a break! You've been using your phone. Rest your eyes for 10 seconds.";
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
   @override
@@ -144,9 +163,9 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
                   const SizedBox(height: 24),
                   // Title
                   Text(
-                    "Focus Mode Active",
+                    _isBreak ? "Break Time Active" : "Focus Mode Active",
                     style: TextStyle(
-                      color: AppColors.primary,
+                      color: _isBreak ? AppColors.secondary : AppColors.primary,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 2,
@@ -176,7 +195,7 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
                           value: _secondsRemaining / 10,
                           strokeWidth: 6,
                           backgroundColor: Colors.white12,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          valueColor: AlwaysStoppedAnimation<Color>(_isBreak ? AppColors.secondary : AppColors.primary),
                         ),
                       ),
                       Text(

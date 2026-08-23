@@ -25,6 +25,11 @@ class AppConstants {
   static const String keyAppLimitsEnabled = 'app_limits_enabled';
   static const String keyAppLimitPackages = 'app_limit_packages';
   static const String keyAppLimitMinsPrefix = 'app_limit_mins_';
+  static const String keyStrictModeEnabled = 'strict_mode_enabled';
+  static const String keyStrictModeDelayMinutes = 'strict_mode_delay_minutes';
+  static const String keyStrictModeCountdownStart = 'strict_mode_countdown_start';
+  static const String keyTargetFeatureToDisable = 'target_feature_to_disable';
+  static const String keyStrictModeDelayLockedUntil = 'strict_mode_delay_locked_until';
 
   static const int defaultScrollLimitMinutes = 30;
   static const int defaultBreakIntervalMinutes = 20;

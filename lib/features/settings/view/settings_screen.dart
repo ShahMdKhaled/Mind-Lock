@@ -2,23 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
+import '../../../shared/widgets/strict_mode_dialog.dart';
 import '../viewmodel/settings_viewmodel.dart';
 import '../../reels_blocker/view/reels_blocker_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => SettingsViewModel(),
-      child: const _SettingsScreenContent(),
-    );
-  }
+  State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenContent extends StatelessWidget {
-  const _SettingsScreenContent();
+class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<SettingsViewModel>().checkPermissions();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      context.read<SettingsViewModel>().checkPermissions();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,30 +57,135 @@ class _SettingsScreenContent extends StatelessWidget {
               Icons.block,
               () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ReelsBlockerScreen())),
             ),
-            _buildSettingTile(
-              'Uninstall Protection',
-              'Prevent app removal for 30 days',
-              Icons.security,
-              settings.uninstallProtectionEnabled,
-              (v) => vm.toggleUninstallProtection(v),
+            _buildConfigurableSettingTile(
+              title: 'Uninstall Protection',
+              subtitle: 'Prevent app removal for 30 days',
+              icon: Icons.security,
+              value: settings.uninstallProtectionEnabled,
+              onChanged: (v) {
+                if (!v && settings.uninstallProtectionEnabled) {
+                  if (settings.strictModeEnabled) {
+                    if (settings.targetFeatureToDisable == 'uninstall_protection' && !settings.isStrictModeDelayActive && settings.strictModeCountdownStart != null) {
+                      vm.toggleUninstallProtection(false);
+                    } else {
+                      _showCountdownOrStartDialog(context, vm, 'uninstall_protection', 'Uninstall Protection');
+                    }
+                  } else {
+                    vm.toggleUninstallProtection(false);
+                  }
+                } else {
+                  vm.toggleUninstallProtection(v);
+                }
+              },
+              children: [],
+            ),
+            const SizedBox(height: 24),
+            _buildSectionHeader('Strict Protection'),
+            _buildConfigurableSettingTile(
+              title: 'Strict Mode (Lock Delay)',
+              subtitle: 'Prevent turning off limits without a delay timer',
+              icon: Icons.lock_clock,
+              value: settings.strictModeEnabled,
+              onChanged: (v) {
+                if (!v && settings.strictModeEnabled) {
+                  if (settings.targetFeatureToDisable == 'strict_mode' && !settings.isStrictModeDelayActive && settings.strictModeCountdownStart != null) {
+                    vm.toggleStrictMode(false);
+                  } else {
+                    _showCountdownOrStartDialog(context, vm, 'strict_mode', 'Strict Mode');
+                  }
+                } else {
+                  vm.toggleStrictMode(v);
+                }
+              },
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Delay Duration', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove, size: 20, color: AppColors.primary),
+                          onPressed: settings.strictModeDelayMinutes > 1
+                              ? () => vm.updateStrictModeDelay(settings.strictModeDelayMinutes - 1)
+                              : null,
+                        ),
+                        Text('${settings.strictModeDelayMinutes} sec', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        IconButton(
+                          icon: const Icon(Icons.add, size: 20, color: AppColors.primary),
+                          onPressed: () => vm.updateStrictModeDelay(settings.strictModeDelayMinutes + 1),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             _buildSectionHeader('Limits & Breaks'),
-            _buildActionTile(
-              'Daily Scroll Limit',
-              '${settings.scrollLimitMinutes} minutes',
-              Icons.hourglass_bottom,
-              () => _showScrollLimitDialog(context, vm),
+            _buildConfigurableSettingTile(
+              title: 'App Time Breaks',
+              subtitle: 'Get reminders to take a break',
+              icon: Icons.av_timer,
+              value: settings.breakEnabled,
+              onChanged: (v) => vm.toggleBreakEnabled(v),
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Break Interval', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove, size: 20, color: AppColors.primary),
+                          onPressed: settings.breakIntervalMinutes > 1
+                              ? () => vm.updateBreakIntervalMinutes(settings.breakIntervalMinutes - 1)
+                              : null,
+                        ),
+                        Text('${settings.breakIntervalMinutes} min', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        IconButton(
+                          icon: const Icon(Icons.add, size: 20, color: AppColors.primary),
+                          onPressed: () => vm.updateBreakIntervalMinutes(settings.breakIntervalMinutes + 1),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
             ),
-            _buildActionTile(
-              'Break Intervals',
-              'Every ${settings.breakIntervalMinutes} mins',
-              Icons.coffee,
-              () => _showBreakIntervalDialog(context, vm),
+            _buildConfigurableSettingTile(
+              title: 'Daily Scroll Limit',
+              subtitle: 'Set maximum daily browsing time',
+              icon: Icons.hourglass_bottom,
+              value: settings.scrollLimitEnabled,
+              onChanged: (v) => vm.toggleScrollLimit(v),
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Scroll Limit', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove, size: 20, color: AppColors.primary),
+                          onPressed: settings.scrollLimitMinutes > 5
+                              ? () => vm.updateScrollLimitMinutes(settings.scrollLimitMinutes - 5)
+                              : null,
+                        ),
+                        Text('${settings.scrollLimitMinutes} min', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        IconButton(
+                          icon: const Icon(Icons.add, size: 20, color: AppColors.primary),
+                          onPressed: () => vm.updateScrollLimitMinutes(settings.scrollLimitMinutes + 5),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: 24),
-            _buildSectionHeader('Permissions'),
-            _buildPermissionTile('Usage Access', 'Required for usage tracking', Icons.insights),
+            _buildSectionHeader('Permissions Status'),
+            _buildPermissionsCard(context, vm),
           ],
         ),
       ),
@@ -76,15 +199,35 @@ class _SettingsScreenContent extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingTile(String title, String subtitle, IconData icon, bool value, Function(bool) onChanged) {
+  Widget _buildConfigurableSettingTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool value,
+    required Function(bool) onChanged,
+    required List<Widget> children,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.cardBorder)),
-      child: ListTile(
-        leading: Icon(icon, color: AppColors.primary),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-        trailing: Switch(value: value, onChanged: onChanged),
+      child: Column(
+        children: [
+          ListTile(
+            leading: Icon(icon, color: AppColors.primary),
+            title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+            trailing: Switch(value: value, onChanged: onChanged),
+          ),
+          if (value && children.isNotEmpty) ...[
+            const Divider(height: 1, color: AppColors.cardBorder),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: children,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -109,43 +252,93 @@ class _SettingsScreenContent extends StatelessWidget {
     );
   }
 
-  Widget _buildPermissionTile(String title, String subtitle, IconData icon) {
+  Widget _buildPermissionsCard(BuildContext context, SettingsViewModel vm) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.cardBorder)),
-      child: ListTile(
-        leading: Icon(icon, color: AppColors.textMuted),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-        trailing: TextButton(onPressed: () {}, child: const Text('GRANT')),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorder),
       ),
-    );
-  }
-
-  void _showScrollLimitDialog(BuildContext context, SettingsViewModel vm) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Daily Scroll Limit'),
-        content: Text('Current: ${vm.settings.scrollLimitMinutes} minutes'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Save')),
+      child: Column(
+        children: [
+          _buildPermissionItem('Usage Access', vm.isUsageGranted, () => vm.requestUsage()),
+          const Divider(height: 24, color: AppColors.cardBorder),
+          _buildPermissionItem('Accessibility Service', vm.isAccessibilityEnabled, () => vm.requestAccessibility()),
+          const Divider(height: 24, color: AppColors.cardBorder),
+          _buildPermissionItem('Display Over Other Apps', vm.isOverlayGranted, () => vm.requestOverlay()),
+          const Divider(height: 24, color: AppColors.cardBorder),
+          _buildPermissionItem('Notifications', vm.isNotificationGranted, () => vm.requestNotification()),
         ],
       ),
     );
   }
 
-  void _showBreakIntervalDialog(BuildContext context, SettingsViewModel vm) {
+  Widget _buildPermissionItem(String name, bool isGranted, VoidCallback onRequest) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(
+                    isGranted ? Icons.check_circle : Icons.cancel,
+                    color: isGranted ? AppColors.success : AppColors.textMuted,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    isGranted ? 'Granted' : 'Missing',
+                    style: TextStyle(
+                      color: isGranted ? AppColors.success : AppColors.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (!isGranted)
+          ElevatedButton(
+            onPressed: onRequest,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Grant', style: TextStyle(color: Colors.white, fontSize: 12)),
+          ),
+      ],
+    );
+  }
+
+  void _showCountdownOrStartDialog(BuildContext context, SettingsViewModel vm, String featureKey, String featureName) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Break Intervals'),
-        content: Text('Current: Every ${vm.settings.breakIntervalMinutes} minutes'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Save')),
-        ],
+      builder: (ctx) => ChangeNotifierProvider.value(
+        value: vm,
+        child: Consumer<SettingsViewModel>(
+          builder: (context, vm, child) => StrictModeDialog(
+            featureKey: featureKey,
+            featureName: featureName,
+            settings: vm.settings,
+            onStartCountdown: () => vm.startDisableCountdown(featureKey),
+            onDisableConfirmed: () {
+              if (featureKey == 'uninstall_protection') {
+                vm.toggleUninstallProtection(false);
+              } else if (featureKey == 'strict_mode') {
+                vm.toggleStrictMode(false);
+              }
+            },
+          ),
+        ),
       ),
     );
   }

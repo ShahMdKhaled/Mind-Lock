@@ -1,4 +1,4 @@
-package com.example.mindlock
+package com.noorsoft.mindlock
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -12,7 +12,7 @@ import android.os.Process
 import android.app.NotificationManager
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.example.mindlock/permissions"
+    private val CHANNEL = "com.noorsoft.mindlock/permissions"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

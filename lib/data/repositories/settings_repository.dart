@@ -61,6 +61,38 @@ class SettingsRepository {
     await _localStorage.setBool('app_limits_enabled', enabled);
   }
 
+  Future<void> setStrictModeEnabled(bool enabled) async {
+    await _localStorage.setBool('strict_mode_enabled', enabled);
+  }
+
+  Future<void> setStrictModeDelayMinutes(int minutes) async {
+    await _localStorage.setInt('strict_mode_delay_minutes', minutes);
+  }
+
+  Future<void> setStrictModeCountdownStart(DateTime? dateTime) async {
+    if (dateTime != null) {
+      await _localStorage.setString('strict_mode_countdown_start', dateTime.toIso8601String());
+    } else {
+      await _localStorage.prefs.remove('strict_mode_countdown_start');
+    }
+  }
+
+  Future<void> setTargetFeatureToDisable(String? feature) async {
+    if (feature != null) {
+      await _localStorage.setString('target_feature_to_disable', feature);
+    } else {
+      await _localStorage.prefs.remove('target_feature_to_disable');
+    }
+  }
+
+  Future<void> setStrictModeDelayLockedUntil(DateTime? dateTime) async {
+    if (dateTime != null) {
+      await _localStorage.setString('strict_mode_delay_locked_until', dateTime.toIso8601String());
+    } else {
+      await _localStorage.prefs.remove('strict_mode_delay_locked_until');
+    }
+  }
+
   Future<bool> isSetupComplete() async {
     return await _localStorage.isSetupComplete();
   }

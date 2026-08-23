@@ -1,4 +1,4 @@
-package com.example.mindlock
+package com.noorsoft.mindlock
 
 import io.flutter.embedding.android.FlutterActivity
 

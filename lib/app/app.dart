@@ -12,6 +12,8 @@ import '../features/settings/view/settings_screen.dart';
 import '../features/reels_blocker/view/reels_block_overlay.dart';
 import '../features/app_limits/viewmodel/app_limits_viewmodel.dart';
 
+import '../features/settings/viewmodel/settings_viewmodel.dart';
+
 class MindLockApp extends StatelessWidget {
   const MindLockApp({super.key});
 
@@ -25,6 +27,7 @@ class MindLockApp extends StatelessWidget {
         ChangeNotifierProvider(
             create: (_) => StudyStatsViewModel()..loadStats()),
         ChangeNotifierProvider(create: (_) => AppLimitsViewModel()),
+        ChangeNotifierProvider(create: (_) => SettingsViewModel()),
       ],
       child: MaterialApp(
         title: 'MindLock',

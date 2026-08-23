@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class PermissionService {
-  static const MethodChannel _channel = MethodChannel('com.example.mindlock/permissions');
+  static const MethodChannel _channel = MethodChannel('com.noorsoft.mindlock/permissions');
 
   Future<bool> isUsageAccessGranted() async {
     try {

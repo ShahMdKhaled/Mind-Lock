@@ -1,4 +1,4 @@
-package com.example.mindlock
+package com.noorsoft.mindlock
 
 import android.view.accessibility.AccessibilityNodeInfo
 import android.graphics.Rect
@@ -36,8 +36,14 @@ class FacebookMainAnalyzer : IReelsAnalyzer {
             if (isComment) result.hasComment = true
             if (isShare) result.hasShare = true
             
+            val foundCount = (if (result.hasLike) 1 else 0) + (if (result.hasComment) 1 else 0) + (if (result.hasShare) 1 else 0)
+            if (foundCount >= 2) {
+                result.isReel = true
+            }
+            
             // If any of these 3 buttons or a clickable icon with a number is found on the right
-            if (isLike || isComment || isShare || (node.isClickable && text.matches(Regex(".*\\d+.*")))) {
+            val hasDigit = text.any { it.isDigit() } || desc.any { it.isDigit() }
+            if (isLike || isComment || isShare || (node.isClickable && hasDigit)) {
                 if (rect.width() < screenWidth * 0.4) {
                     result.rightSideClickablesList.add(Rect(rect))
                 }
@@ -79,7 +85,7 @@ class FacebookLiteAnalyzer : IReelsAnalyzer {
 
         // 3. Collect Interaction Buttons and Counts on the Far Right
         if (rect.left > screenWidth * 0.75 && rect.top > screenHeight * 0.15 && rect.bottom < screenHeight * 0.95) {
-            val containsNumber = cleanText.matches(Regex("\\d+.*"))
+            val containsNumber = cleanText.any { it.isDigit() } || cleanDesc.any { it.isDigit() }
             val isInteractionIcon = node.isClickable && rect.width() < screenWidth * 0.3
             
             if (containsNumber || isInteractionIcon) {
@@ -94,12 +100,37 @@ class FacebookLiteAnalyzer : IReelsAnalyzer {
 // ==========================================
 class InstagramAnalyzer : IReelsAnalyzer {
     override fun analyze(node: AccessibilityNodeInfo, rect: Rect, text: String, desc: String, result: MindLockAccessibilityService.UIAnalysisResult, screenWidth: Int, screenHeight: Int) {
-        if (text.equals("Reels", true) || desc.contains("Reels", true)) {
-            if (rect.top < screenHeight * 0.15) result.isReel = true
+        val cleanText = text.trim()
+        val cleanDesc = desc.trim()
+
+        // Exact match to avoid false positives from "Suggested Reels" text in the feed
+        val isExactReels = cleanText.equals("Reels", true) || cleanDesc.equals("Reels", true) || cleanText.equals("রিলস", true)
+
+        if (isExactReels) {
+            if (rect.top < screenHeight * 0.15) {
+                result.isReel = true
+            }
+            if (node.isSelected) {
+                result.isReel = true
+            }
         }
 
-        if (rect.left > screenWidth * 0.8 && rect.top > screenHeight * 0.3) {
-            if (node.isClickable || desc.contains("button", true)) {
+        // Avoid top 30% (app bar/notifications) and bottom 10% (navigation bar)
+        if (rect.left > screenWidth * 0.75 && rect.top > screenHeight * 0.3 && rect.bottom < screenHeight * 0.9) {
+            val isLike = cleanDesc.contains("like", true) || cleanDesc.contains("love", true)
+            val isComment = cleanDesc.contains("comment", true)
+            val isRepost = cleanDesc.contains("share", true) || cleanDesc.contains("send", true) || cleanDesc.contains("repost", true)
+            
+            if (isLike) result.hasLike = true
+            if (isComment) result.hasComment = true
+            if (isRepost) result.hasShare = true
+
+            val foundCount = (if (result.hasLike) 1 else 0) + (if (result.hasComment) 1 else 0) + (if (result.hasShare) 1 else 0)
+            if (foundCount >= 2) {
+                result.isReel = true
+            }
+
+            if (isLike || isComment || isRepost) {
                 result.rightSideClickablesList.add(Rect(rect))
             }
         }
@@ -128,15 +159,8 @@ class YouTubeAnalyzer : IReelsAnalyzer {
 // ==========================================
 class TikTokAnalyzer : IReelsAnalyzer {
     override fun analyze(node: AccessibilityNodeInfo, rect: Rect, text: String, desc: String, result: MindLockAccessibilityService.UIAnalysisResult, screenWidth: Int, screenHeight: Int) {
-        if (text.contains("For You", true) || text.contains("Following", true)) {
-            if (rect.top < screenHeight * 0.15) result.isReel = true
-        }
-
-        if (rect.left > screenWidth * 0.8 && rect.top > screenHeight * 0.2) {
-            if (node.isClickable || desc.contains("Like", true) || desc.contains("Comment", true)) {
-                result.rightSideClickablesList.add(Rect(rect))
-            }
-        }
+        // Block TikTok completely whenever it is analyzed.
+        result.isReel = true
     }
 }
 

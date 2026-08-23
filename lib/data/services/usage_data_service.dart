@@ -9,7 +9,7 @@ import 'package:installed_apps/app_info.dart';
 
 class UsageDataService {
   static const MethodChannel _channel =
-      MethodChannel('com.example.mindlock/permissions');
+      MethodChannel('com.noorsoft.mindlock/permissions');
   static UsageDataService? _instance;
   static UsageDataService get instance => _instance ??= UsageDataService._();
   UsageDataService._();
@@ -38,7 +38,7 @@ class UsageDataService {
           String packageName = key.toString();
           int durationMs = (value as num).toInt();
 
-          if (durationMs > 0 && packageName != 'com.example.mindlock') {
+          if (durationMs > 0 && packageName != 'com.noorsoft.mindlock') {
             final appInfo = appInfoMap[packageName];
             if (appInfo != null) {
               String appName = appInfo.name;
@@ -64,7 +64,7 @@ class UsageDataService {
 
         for (var usage in usageStats) {
           final appInfo = appInfoMap[usage.packageName];
-          if (appInfo == null || usage.packageName == 'com.example.mindlock') {
+          if (appInfo == null || usage.packageName == 'com.noorsoft.mindlock') {
             continue;
           }
 

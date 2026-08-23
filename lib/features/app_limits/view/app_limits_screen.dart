@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:installed_apps/app_info.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
+import '../../../shared/widgets/strict_mode_dialog.dart';
 import '../viewmodel/app_limits_viewmodel.dart';
 
 class AppLimitsScreen extends StatelessWidget {
@@ -172,7 +173,35 @@ class _AppLimitsScreenContentState extends State<_AppLimitsScreenContent> {
           ),
           Switch.adaptive(
             value: enabled,
-            onChanged: (v) => vm.toggleMasterShield(v),
+            onChanged: (v) {
+              if (!v && enabled) {
+                if (vm.settings.strictModeEnabled) {
+                  if (vm.settings.targetFeatureToDisable == 'app_limits' && !vm.settings.isStrictModeDelayActive && vm.settings.strictModeCountdownStart != null) {
+                    vm.toggleMasterShield(false);
+                  } else {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => ChangeNotifierProvider.value(
+                        value: vm,
+                        child: Consumer<AppLimitsViewModel>(
+                          builder: (context, vm, child) => StrictModeDialog(
+                            featureKey: 'app_limits',
+                            featureName: 'App Limits',
+                            settings: vm.settings,
+                            onStartCountdown: () => vm.requestDisableFeature('app_limits'),
+                            onDisableConfirmed: () => vm.toggleMasterShield(false),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                } else {
+                  vm.toggleMasterShield(false);
+                }
+              } else {
+                vm.toggleMasterShield(v);
+              }
+            },
             activeTrackColor: AppColors.warning,
           ),
         ],

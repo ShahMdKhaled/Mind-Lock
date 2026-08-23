@@ -1,4 +1,4 @@
-package com.example.mindlock
+package com.noorsoft.mindlock
 
 import android.app.admin.DeviceAdminReceiver
 import android.content.Context
