@@ -39,7 +39,7 @@ class _StatsScreenState extends State<StatsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildChartCard(),
+                _buildChartCard(vm),
                 const SizedBox(height: 24),
                 Text('Most Used Apps', style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 16),
@@ -55,7 +55,30 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _buildChartCard() {
+  Widget _buildChartCard(StatsViewModel vm) {
+    final weeklyData = vm.weeklyData;
+    
+    double maxHours = 2.0;
+    List<BarChartGroupData> barGroups = [];
+    
+    if (weeklyData.isNotEmpty) {
+      for (int i = 0; i < weeklyData.length; i++) {
+        final hours = weeklyData[i].totalScreen.inMinutes / 60.0;
+        if (hours > maxHours) maxHours = hours;
+        
+        final color = (hours > 6) ? AppColors.danger : AppColors.primary;
+        barGroups.add(_makeGroupData(i, hours, color, maxHours));
+      }
+    } else {
+      // Fallback empty state
+      for (int i = 0; i < 7; i++) {
+        barGroups.add(_makeGroupData(i, 0, AppColors.primary, 2.0));
+      }
+    }
+    
+    // Add some padding to maxY
+    maxHours = maxHours * 1.2;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -66,23 +89,38 @@ class _StatsScreenState extends State<StatsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Weekly Overview', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const Text('Weekly Overview (Hours)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 24),
           SizedBox(
             height: 200,
             child: BarChart(
               BarChartData(
                 alignment: BarChartAlignment.spaceAround,
-                maxY: 10,
-                barTouchData: BarTouchData(enabled: false),
+                maxY: maxHours,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (group) => AppColors.surfaceVariant,
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final hours = rod.toY.toInt();
+                      final mins = ((rod.toY - hours) * 60).round();
+                      return BarTooltipItem(
+                        '${hours}h ${mins}m',
+                        const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      );
+                    },
+                  ),
+                ),
                 titlesData: FlTitlesData(
                   show: true,
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
+                        if (weeklyData.isEmpty) return const Text('');
+                        final date = weeklyData[value.toInt()].date;
                         const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                        return Text(days[value.toInt() % 7], style: const TextStyle(color: AppColors.textMuted));
+                        return Text(days[date.weekday - 1], style: const TextStyle(color: AppColors.textMuted));
                       },
                     ),
                   ),
@@ -92,15 +130,7 @@ class _StatsScreenState extends State<StatsScreen> {
                 ),
                 gridData: const FlGridData(show: false),
                 borderData: FlBorderData(show: false),
-                barGroups: [
-                  _makeGroupData(0, 4, AppColors.primary),
-                  _makeGroupData(1, 6, AppColors.primary),
-                  _makeGroupData(2, 3, AppColors.primary),
-                  _makeGroupData(3, 8, AppColors.danger),
-                  _makeGroupData(4, 5, AppColors.primary),
-                  _makeGroupData(5, 7, AppColors.primary),
-                  _makeGroupData(6, 4, AppColors.primary),
-                ],
+                barGroups: barGroups,
               ),
             ),
           ),
@@ -109,7 +139,7 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  BarChartGroupData _makeGroupData(int x, double y, Color color) {
+  BarChartGroupData _makeGroupData(int x, double y, Color color, double maxY) {
     return BarChartGroupData(
       x: x,
       barRods: [
@@ -118,7 +148,7 @@ class _StatsScreenState extends State<StatsScreen> {
           color: color,
           width: 12,
           borderRadius: BorderRadius.circular(4),
-          backDrawRodData: BackgroundBarChartRodData(show: true, toY: 10, color: AppColors.surfaceVariant),
+          backDrawRodData: BackgroundBarChartRodData(show: true, toY: maxY == 0 ? 10 : maxY, color: AppColors.surfaceVariant),
         ),
       ],
     );
@@ -137,9 +167,17 @@ class _StatsScreenState extends State<StatsScreen> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: AppColors.surfaceVariant,
-            child: Text(usage.appName[0], style: const TextStyle(color: AppColors.textPrimary)),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceVariant,
+              shape: BoxShape.circle,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: usage.icon != null
+                ? Image.memory(usage.icon, fit: BoxFit.cover)
+                : Center(child: Text(usage.appName[0], style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold))),
           ),
           const SizedBox(width: 16),
           Expanded(

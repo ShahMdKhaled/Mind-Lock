@@ -59,7 +59,7 @@ class AppSettings {
 
   bool get isStrictModeDelayActive {
     if (!strictModeEnabled || strictModeCountdownStart == null) return false;
-    final delayEnd = strictModeCountdownStart!.add(Duration(seconds: strictModeDelayMinutes));
+    final delayEnd = strictModeCountdownStart!.add(Duration(minutes: strictModeDelayMinutes));
     return DateTime.now().isBefore(delayEnd);
   }
 
@@ -70,7 +70,7 @@ class AppSettings {
 
   Duration get strictModeDelayRemaining {
     if (!isStrictModeDelayActive) return Duration.zero;
-    final delayEnd = strictModeCountdownStart!.add(Duration(seconds: strictModeDelayMinutes));
+    final delayEnd = strictModeCountdownStart!.add(Duration(minutes: strictModeDelayMinutes));
     return delayEnd.difference(DateTime.now());
   }
 
@@ -104,6 +104,7 @@ class AppSettings {
     DateTime? strictModeCountdownStart,
     String? targetFeatureToDisable,
     DateTime? strictModeDelayLockedUntil,
+    bool clearStrictModeState = false,
   }) {
     return AppSettings(
       reelsBlockerEnabled: reelsBlockerEnabled ?? this.reelsBlockerEnabled,
@@ -125,8 +126,8 @@ class AppSettings {
       appLimits: appLimits ?? this.appLimits,
       strictModeEnabled: strictModeEnabled ?? this.strictModeEnabled,
       strictModeDelayMinutes: strictModeDelayMinutes ?? this.strictModeDelayMinutes,
-      strictModeCountdownStart: strictModeCountdownStart ?? this.strictModeCountdownStart,
-      targetFeatureToDisable: targetFeatureToDisable ?? this.targetFeatureToDisable,
+      strictModeCountdownStart: clearStrictModeState ? null : (strictModeCountdownStart ?? this.strictModeCountdownStart),
+      targetFeatureToDisable: clearStrictModeState ? null : (targetFeatureToDisable ?? this.targetFeatureToDisable),
       strictModeDelayLockedUntil: strictModeDelayLockedUntil ?? this.strictModeDelayLockedUntil,
     );
   }

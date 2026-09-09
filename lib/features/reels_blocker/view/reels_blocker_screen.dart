@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import '../../../shared/widgets/strict_mode_dialog.dart';
+import '../../permissions/view/permission_screen.dart';
 import '../viewmodel/reels_blocker_viewmodel.dart';
 
 class ReelsBlockerScreen extends StatelessWidget {
@@ -99,7 +100,16 @@ class _ReelsBlockerScreenContent extends StatelessWidget {
           ),
           Switch.adaptive(
             value: settings.reelsBlockerEnabled,
-            onChanged: (v) {
+            onChanged: (v) async {
+              if (v) {
+                final hasPerms = await vm.checkPermissions();
+                if (!context.mounted) return;
+                if (!hasPerms) {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PermissionScreen()));
+                  return;
+                }
+              }
+
               if (!v && settings.reelsBlockerEnabled) {
                 if (settings.strictModeEnabled) {
                   if (settings.targetFeatureToDisable == 'reels_blocker' &&
@@ -107,6 +117,7 @@ class _ReelsBlockerScreenContent extends StatelessWidget {
                       settings.strictModeCountdownStart != null) {
                     vm.toggleMasterShield(false);
                   } else {
+                    if (!context.mounted) return;
                     showDialog(
                       context: context,
                       builder: (ctx) => ChangeNotifierProvider.value(
@@ -120,6 +131,7 @@ class _ReelsBlockerScreenContent extends StatelessWidget {
                                 vm.requestDisableFeature('reels_blocker'),
                             onDisableConfirmed: () =>
                                 vm.toggleMasterShield(false),
+                            onCancelCountdown: () => vm.clearDisableCountdown(),
                           ),
                         ),
                       ),
@@ -149,7 +161,7 @@ class _ReelsBlockerScreenContent extends StatelessWidget {
           border: Border.all(color: AppColors.cardBorder)),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        leading: _getAppIcon(package),
+        leading: _getAppIcon(package, vm),
         title: Text(name,
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
         subtitle: Text(value ? 'Blocking active' : 'Blocking off',
@@ -181,6 +193,7 @@ class _ReelsBlockerScreenContent extends StatelessWidget {
                                 'reels_blocker_$package'),
                             onDisableConfirmed: () =>
                                 vm.togglePackage(package, false),
+                            onCancelCountdown: () => vm.clearDisableCountdown(),
                           ),
                         ),
                       ),
@@ -220,7 +233,20 @@ class _ReelsBlockerScreenContent extends StatelessWidget {
     );
   }
 
-  Widget _getAppIcon(String package) {
+  Widget _getAppIcon(String package, ReelsBlockerViewModel vm) {
+    if (vm.appIcons.containsKey(package)) {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: AppColors.surfaceVariant,
+          shape: BoxShape.circle,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Image.memory(vm.appIcons[package]!, fit: BoxFit.cover),
+      );
+    }
+
     IconData iconData = Icons.apps;
     Color color = AppColors.primary;
 

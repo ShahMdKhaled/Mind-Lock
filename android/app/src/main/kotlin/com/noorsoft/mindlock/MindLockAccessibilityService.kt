@@ -24,6 +24,29 @@ class MindLockAccessibilityService : AccessibilityService() {
     private var cachedReelsEnabled = false
     private var cachedBlockedPackages = listOf<String>()
     private var cachedAppLimitPackages = listOf<String>()
+    private var lastStudyModeToastTime = 0L
+    private var lastAppLimitToastTime = 0L
+    private var lastAnalysisTime = 0L
+
+    // Dynamic Punishment Logic
+    data class PunishmentState(
+        var blockCount: Int = 0,
+        var firstBlockTime: Long = 0L,
+        var punishmentEndTime: Long = 0L,
+        var lastPunishmentIntentTime: Long = 0L
+    )
+
+    private val punishmentStates = mutableMapOf<String, PunishmentState>()
+
+    private fun getAppName(packageName: String): String {
+        return when {
+            packageName.contains("facebook", ignoreCase = true) -> "Facebook"
+            packageName.contains("instagram", ignoreCase = true) -> "Instagram"
+            packageName.contains("youtube", ignoreCase = true) -> "YouTube"
+            packageName.contains("tiktok", ignoreCase = true) || packageName.contains("musically") -> "TikTok"
+            else -> "App"
+        }
+    }
 
     private fun updatePrefsCache(prefs: android.content.SharedPreferences) {
         val now = System.currentTimeMillis()
@@ -45,6 +68,13 @@ class MindLockAccessibilityService : AccessibilityService() {
 
         val packageName = event.packageName?.toString() ?: return
         
+        // IMPORTANT FIX: Never process events from our own app, preventing infinite loops.
+        if (packageName == "com.noorsoft.mindlock") return
+        
+        // IMPORTANT FIX: If we just triggered a block, ignore all events for a short duration
+        // to allow the UI to settle and prevent rapid stacking of Activities.
+        if (isBlockingActive) return
+        
         val isRelevantEvent = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
                              event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
 
@@ -52,6 +82,33 @@ class MindLockAccessibilityService : AccessibilityService() {
 
         val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
         updatePrefsCache(prefs)
+        
+        // --- Dynamic Punishment Enforcement ---
+        val state = punishmentStates[packageName]
+        if (state != null && System.currentTimeMillis() < state.punishmentEndTime) {
+            val now = System.currentTimeMillis()
+            // Throttle punishment overlay to max once every 3 seconds to avoid infinite loop crashes
+            if (now - state.lastPunishmentIntentTime < 3000) return
+            state.lastPunishmentIntentTime = now
+
+            isBlockingActive = true
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            
+            prefs.edit().putString("flutter.active_overlay_type", "punishment").apply()
+            prefs.edit().putString("flutter.punishment_app_name", getAppName(packageName)).apply()
+            handler.postDelayed({
+                try {
+                    val intent = Intent(this, ReelsBlockActivity::class.java)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    startActivity(intent)
+                } catch (e: Exception) {}
+            }, 100)
+            
+            handler.postDelayed({ isBlockingActive = false }, 1500)
+            return
+        }
+        // --- End Dynamic Punishment Enforcement ---
         
         // --- App Time Break Reminder ---
         if (cachedBreakEnabled && packageName.lowercase() != "com.noorsoft.mindlock") {
@@ -65,14 +122,15 @@ class MindLockAccessibilityService : AccessibilityService() {
                 }
             }
             
-            // In test mode: treat minutes as seconds for fast testing!
-            val breakIntervalMs = breakIntervalMins * 1000
+            // In production: treat minutes as minutes!
+            val breakIntervalMs = breakIntervalMins * 60 * 1000
             val lastBreakTime = prefs.getLong("flutter.last_break_time_ms", 0L)
             val now = System.currentTimeMillis()
             
             if (lastBreakTime == 0L) {
                 prefs.edit().putLong("flutter.last_break_time_ms", now).apply()
             } else if (now - lastBreakTime >= breakIntervalMs) {
+                isBlockingActive = true
                 prefs.edit().putLong("flutter.last_break_time_ms", now).apply()
                 prefs.edit().putString("flutter.active_overlay_type", "break").apply()
                 
@@ -86,6 +144,8 @@ class MindLockAccessibilityService : AccessibilityService() {
                         startActivity(intent)
                     } catch (e: Exception) {}
                 }
+                
+                handler.postDelayed({ isBlockingActive = false }, 1500)
                 return
             }
         }
@@ -105,15 +165,22 @@ class MindLockAccessibilityService : AccessibilityService() {
                     lowerPkg.contains("com.android.settings")
 
             if (!isAllowedApp) {
+                isBlockingActive = true
                 Log.d("MindLock", "Study Mode Active - Blocking App: $packageName")
                 performGlobalAction(GLOBAL_ACTION_HOME)
                 performGlobalAction(GLOBAL_ACTION_BACK)
                 
-                handler.post {
-                    try {
-                        android.widget.Toast.makeText(applicationContext, "Study Mode Active! Return to Focus.", android.widget.Toast.LENGTH_SHORT).show()
-                    } catch (e: Exception) {}
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastStudyModeToastTime > 3000) {
+                    lastStudyModeToastTime = currentTime
+                    handler.post {
+                        try {
+                            android.widget.Toast.makeText(applicationContext, "Study Mode Active! Return to Focus.", android.widget.Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {}
+                    }
                 }
+                
+                handler.postDelayed({ isBlockingActive = false }, 1500)
                 return
             }
         }
@@ -124,6 +191,7 @@ class MindLockAccessibilityService : AccessibilityService() {
             val rootNode = rootInActiveWindow
             if (rootNode != null) {
                 if (checkForUninstallAttempt(rootNode, packageName)) {
+                    isBlockingActive = true
                     Log.d("MindLock", "Blocked uninstall or deactivate attempt")
                     performGlobalAction(GLOBAL_ACTION_HOME)
                     
@@ -134,6 +202,7 @@ class MindLockAccessibilityService : AccessibilityService() {
                         startActivity(intent)
                     } catch (e: Exception) { }
                     
+                    handler.postDelayed({ isBlockingActive = false }, 1500)
                     return
                 }
             }
@@ -160,19 +229,26 @@ class MindLockAccessibilityService : AccessibilityService() {
                     val usageMins = usageMs / (1000 * 60)
                     
                     if (usageMins >= limitMins) {
+                        isBlockingActive = true
                         Log.d("MindLock", "App Limit Reached - Blocking App: $packageName ($usageMins mins vs $limitMins mins limit)")
                         performGlobalAction(GLOBAL_ACTION_HOME)
                         performGlobalAction(GLOBAL_ACTION_BACK)
                         
-                        handler.post {
-                            try {
-                                android.widget.Toast.makeText(
-                                    applicationContext,
-                                    "Daily usage limit reached for this app!",
-                                    android.widget.Toast.LENGTH_SHORT
-                                ).show()
-                            } catch (e: Exception) {}
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastAppLimitToastTime > 3000) {
+                            lastAppLimitToastTime = currentTime
+                            handler.post {
+                                try {
+                                    android.widget.Toast.makeText(
+                                        applicationContext,
+                                        "Daily usage limit reached for this app!",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                } catch (e: Exception) {}
+                            }
                         }
+                        
+                        handler.postDelayed({ isBlockingActive = false }, 1500)
                         return
                     }
                 }
@@ -181,6 +257,9 @@ class MindLockAccessibilityService : AccessibilityService() {
         // --- End App Use Limit Blocking ---
         
         if (!cachedReelsEnabled) return
+        
+        // Strict cooldown during/after popup to prevent rapid re-triggering
+        if (isBlockingActive) return
 
         // Check if this specific package is blocked
         val blockedPackages = cachedBlockedPackages
@@ -191,42 +270,43 @@ class MindLockAccessibilityService : AccessibilityService() {
         }
 
         if (isBlocked) {
-            // Instantly block TikTok without waiting for UI nodes to load
-            val lowerPkg = packageName.lowercase()
-            if (lowerPkg.contains("tiktok") || lowerPkg.contains("musically") || lowerPkg.contains("trill")) {
-                Log.d("MindLock", "TikTok is entirely blocked")
-                blockContent(aggressiveBlock = true)
+            // Prevent the app from blocking itself or getting into an infinite loop
+            if (packageName == "com.noorsoft.mindlock") return
+
+            val analyzer = analyzers.entries.find { packageName.contains(it.key, ignoreCase = true) }?.value
+            
+            // Phase 1: Pre-analysis (Instant blocking)
+            if (analyzer?.shouldInstantBlock() == true) {
+                Log.d("MindLock", "Instantly blocked $packageName")
+                blockContent(packageName, aggressiveBlock = analyzer.isAggressiveBlock())
                 return
             }
+
+            // Analysis throttling: skip if less than 150ms since last analysis to allow fast scrolling detection
+            val now = System.currentTimeMillis()
+            if (now - lastAnalysisTime < 150) return
+            lastAnalysisTime = now
 
             val rootNode = rootInActiveWindow ?: return
             
             // Exclusion: Messenger and direct typing
             if (packageName.contains("messenger", true)) return
 
+            // Phase 2 & 3: UI Analysis & Post Evaluation
             val analysis = performUIAnalysis(rootNode, packageName)
-            val isInstagram = packageName.contains("instagram", ignoreCase = true)
             
-            // For Facebook and others: Restoring previous logic.
-            // If comment input is active, abort blocking to allow typing.
-            if (!isInstagram) {
-                if (analysis.isCommentInputActive || analysis.isCommentSectionActive) {
-                    return
-                }
+            // Phase 4: Decision making
+            val shouldBlock = analyzer?.shouldBlock(analysis) ?: run {
+                // Generic fallback for apps without an analyzer (if any)
+                if (analysis.hasMainNavigation) false
+                else if (analysis.isCommentInputActive || analysis.isCommentSectionActive) false
+                else analysis.isReel || analysis.isYouTubeShorts
             }
-
-            // Reels block takes precedence for Instagram! 
-            if (analysis.isReel || analysis.isYouTubeShorts) {
+            
+            if (shouldBlock) {
                 Log.d("MindLock", "Reels/Shorts blocked in $packageName")
-                blockContent(aggressiveBlock = false)
+                blockContent(packageName, aggressiveBlock = false)
                 return
-            }
-
-            // For Instagram: Otherwise, allow typing in normal non-Reels sections
-            if (isInstagram) {
-                if (analysis.isCommentInputActive || analysis.isCommentSectionActive) {
-                    return
-                }
             }
         }
     }
@@ -251,6 +331,9 @@ class MindLockAccessibilityService : AccessibilityService() {
         var hasLike = false
         var hasComment = false
         var hasShare = false
+        var numericStrings = mutableSetOf<String>()
+        var isShoppingPost = false
+        var isExcludedPost = false
     }
 
     private val analyzers = mapOf(
@@ -258,10 +341,10 @@ class MindLockAccessibilityService : AccessibilityService() {
         "com.facebook.lite" to FacebookLiteAnalyzer(),
         "instagram" to InstagramAnalyzer(),
         "youtube" to YouTubeAnalyzer(),
+        "chrome" to ChromeAnalyzer(),
         "tiktok" to TikTokAnalyzer(),
         "musically" to TikTokAnalyzer(),
-        "trill" to TikTokAnalyzer(),
-        "chrome" to ChromeAnalyzer()
+        "trill" to TikTokAnalyzer()
     )
 
     private fun performUIAnalysis(rootNode: AccessibilityNodeInfo, packageName: String): UIAnalysisResult {
@@ -274,6 +357,8 @@ class MindLockAccessibilityService : AccessibilityService() {
         val analyzer = analyzers.entries.find { packageName.contains(it.key) }?.value
 
         traverseNode(rootNode, result, screenWidth, screenHeight, analyzer, isLite)
+        
+        analyzer?.postAnalyze(result)
         
         // Generic logic for other apps (YouTube Shorts, etc.) that rely on vertical stacks
         // Facebook and Instagram handle their own fast detection directly in their Analyzers.
@@ -298,15 +383,6 @@ class MindLockAccessibilityService : AccessibilityService() {
             }
         }
 
-        // Master Override: If we are on the Home page/Main Navigation, it's NOT a standalone Reel
-        // UNLESS it's Facebook Lite and we've already confirmed it's a selected Reels tab
-        if (result.hasMainNavigation) {
-            val isLiteReelsTab = packageName.contains("com.facebook.lite") && result.isReel
-            if (!isLiteReelsTab) {
-                result.isReel = false
-            }
-        }
-
         return result
     }
 
@@ -318,6 +394,9 @@ class MindLockAccessibilityService : AccessibilityService() {
         analyzer: IReelsAnalyzer?,
         isLite: Boolean
     ) {
+        // Early exit: stop traversing if reels/shorts already detected
+        if (result.isReel || result.isYouTubeShorts) return
+
         if (!node.isVisibleToUser) return
 
         val rect = android.graphics.Rect()
@@ -353,8 +432,50 @@ class MindLockAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun blockContent(aggressiveBlock: Boolean = false) {
+    private fun blockContent(packageName: String, aggressiveBlock: Boolean = false) {
         if (isBlockingActive) return
+
+        // Dynamic Punishment Logic
+        val now = System.currentTimeMillis()
+        val state = punishmentStates.getOrPut(packageName) { PunishmentState() }
+        
+        if (now - state.firstBlockTime > 10 * 60 * 1000) {
+            state.blockCount = 0
+            state.firstBlockTime = now
+        }
+        state.blockCount++
+        
+        if (state.blockCount >= 3) {
+            isBlockingActive = true
+            state.punishmentEndTime = now + 30 * 1000
+            state.blockCount = 0
+            
+            Log.d("MindLock", "Punishment Activated for $packageName")
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            
+            val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+            prefs.edit().putString("flutter.active_overlay_type", "punishment").apply()
+            prefs.edit().putLong("flutter.punishment_end_time", state.punishmentEndTime).apply()
+            prefs.edit().putString("flutter.punishment_app_name", getAppName(packageName)).apply()
+            
+            handler.postDelayed({
+                try {
+                    val intent = Intent(this, ReelsBlockActivity::class.java)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Log.e("MindLock", "Failed to launch overlay: ${e.message}")
+                }
+            }, 150)
+            
+            handler.postDelayed({
+                isBlockingActive = false
+            }, 1000)
+            
+            return
+        }
+
         isBlockingActive = true
 
         Log.d("MindLock", "Blocking Reels Action")
@@ -374,7 +495,8 @@ class MindLockAccessibilityService : AccessibilityService() {
         val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
         prefs.edit().putString("flutter.active_overlay_type", "reels").apply()
 
-        // 2. Wait for 500ms, then show the Motivational Popup
+        // 2. Show the Motivational Popup almost instantly (150ms delay)
+        // A slight delay is strictly necessary so the simulated BACK action above doesn't instantly close this popup.
         handler.postDelayed({
             try {
                 val intent = Intent(this, ReelsBlockActivity::class.java)
@@ -384,11 +506,11 @@ class MindLockAccessibilityService : AccessibilityService() {
             } catch (e: Exception) {
                 Log.e("MindLock", "Failed to launch overlay: ${e.message}")
             }
-        }, 500)
+        }, 150)
 
         handler.postDelayed({
             isBlockingActive = false
-        }, 3000)
+        }, 1000)
     }
 
     override fun onInterrupt() {}
@@ -424,17 +546,25 @@ class MindLockAccessibilityService : AccessibilityService() {
             val desc = node.contentDescription?.toString()?.lowercase()?.trim() ?: ""
             
             // Explicit targeted text
-            if ((text.contains("uninstall") || text.contains("remove") || text.contains("delete")) && 
-                (text.contains("mindlock") || text.contains("mind lock"))) {
+            if (text.contains("uninstall mindlock") || text.contains("uninstall mind lock") ||
+                text.contains("remove mindlock") || text.contains("remove mind lock") ||
+                text.contains("delete mindlock") || text.contains("delete mind lock") ||
+                text.contains("mindlock do you want to uninstall this app") ||
+                text.contains("mindlock uninstall this app")) {
                 hasCombinedText = true
             }
-            if ((desc.contains("uninstall") || desc.contains("remove") || desc.contains("delete")) && 
-                (desc.contains("mindlock") || desc.contains("mind lock"))) {
+            if (desc.contains("uninstall mindlock") || desc.contains("uninstall mind lock") ||
+                desc.contains("remove mindlock") || desc.contains("remove mind lock") ||
+                desc.contains("delete mindlock") || desc.contains("delete mind lock") ||
+                desc.contains("mindlock do you want to uninstall this app") ||
+                desc.contains("mindlock uninstall this app")) {
                 hasCombinedText = true
             }
             
             if (text == "mindlock" || text == "mind lock" || 
-                desc == "mindlock" || desc == "mind lock") {
+                desc == "mindlock" || desc == "mind lock" ||
+                text.contains("mindlock") || text.contains("mind lock")) {
+                // Notice we now allow partial match for mindlock but rely on dialog text for safety
                 hasMindLockText = true
             }
             
@@ -445,6 +575,10 @@ class MindLockAccessibilityService : AccessibilityService() {
             }
             
             if (text.contains("do you want to uninstall") || text.contains("uninstall this app") ||
+                text.contains("uninstall app") || text.contains("delete this app") ||
+                (text.contains("uninstall") && text.contains("?")) ||
+                (text.contains("remove") && text.contains("?")) ||
+                (text.contains("delete") && text.contains("?")) ||
                 desc.contains("do you want to uninstall") || desc.contains("uninstall this app")) {
                 hasUninstallDialogText = true
             }
@@ -456,27 +590,45 @@ class MindLockAccessibilityService : AccessibilityService() {
         
         traverse(rootNode)
         
+        // Immediate, undeniable signs of uninstallation attempts (bypasses package check)
+        // 1. Explicit targeted uninstall text like "delete mindlock", "uninstall mindlock"
         if (hasCombinedText) return true
 
+        // For ambiguous cases (like just seeing "MindLock" and "Uninstall" button on the screen), 
+        // we restrict the checks to known system packages (Settings, Installers, PlayStore) 
+        // to prevent false positives in normal apps (like browsers or social media).
         val isSettings = actualPackage.contains("settings")
-        val isInstaller = actualPackage.contains("installer") || actualPackage.contains("parser") || actualPackage.contains("securitycenter")
-        
-        // Scenario 1: In the Settings app, blocking access to MindLock's App Info page (where Force Stop / Uninstall buttons live)
-        if (isSettings && hasMindLockText && hasDangerousAction) {
+        val isInstaller = actualPackage.contains("installer") || actualPackage.contains("parser") || actualPackage.contains("securitycenter") || actualPackage.contains("package")
+        val isPlayStore = actualPackage.contains("vending")
+
+        if (!isSettings && !isInstaller && !isPlayStore) {
+            return false
+        }
+
+        // Scenario 1: In the Settings app or Play Store, blocking access to MindLock's App Info/Details page
+        if ((isSettings || isPlayStore) && hasMindLockText && hasDangerousAction) {
             return true
         }
 
-        // Scenario 2: Standard Package Installers / Uninstallers trying to remove MindLock
-        if (isInstaller && hasMindLockText && hasDangerousAction) {
-            return true
-        }
-
-        // Scenario 3: Any other app (e.g., Launcher). We only block if we strictly detect an uninstall confirmation dialog for MindLock.
-        // This prevents blocking other apps when long-pressing them on the home screen while the MindLock icon is visible.
-        if (hasMindLockText && hasUninstallDialogText) {
-            return true
+        // Scenario 2: Standard Package Installers trying to remove MindLock
+        if (isInstaller && hasMindLockText) {
+            // Installers almost exclusively show uninstall/install dialogs.
+            if (hasDangerousAction || textContainsAnywhere(rootNode, "ok") || textContainsAnywhere(rootNode, "uninstall")) {
+                return true
+            }
         }
         
+        return false
+    }
+
+    private fun textContainsAnywhere(node: AccessibilityNodeInfo?, target: String): Boolean {
+        if (node == null) return false
+        val text = node.text?.toString()?.lowercase() ?: ""
+        val desc = node.contentDescription?.toString()?.lowercase() ?: ""
+        if (text.contains(target) || desc.contains(target)) return true
+        for (i in 0 until node.childCount) {
+            if (textContainsAnywhere(node.getChild(i), target)) return true
+        }
         return false
     }
 

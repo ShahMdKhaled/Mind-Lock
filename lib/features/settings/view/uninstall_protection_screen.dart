@@ -54,6 +54,14 @@ class UninstallProtectionScreen extends StatelessWidget {
                           value: settings.uninstallProtectionEnabled,
                           onChanged: (v) {
                             if (!v && settings.uninstallProtectionEnabled) {
+                              if (settings.isUninstallProtectionActive) {
+                                final remaining = settings.uninstallProtectionRemaining;
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                  content: Text('Locked for 30 days! ${remaining.inDays} days remaining.'),
+                                  backgroundColor: AppColors.danger,
+                                ));
+                                return;
+                              }
                               if (settings.strictModeEnabled) {
                                 if (settings.targetFeatureToDisable == 'uninstall_protection' && !settings.isStrictModeDelayActive && settings.strictModeCountdownStart != null) {
                                   vm.toggleUninstallProtection(false);
@@ -90,8 +98,14 @@ class UninstallProtectionScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _buildInfoCard(
+              '30-Day Lock',
+              'Once enabled, Uninstall Protection is strictly locked for 30 days. You will not be able to disable this option before the 30-day period expires.',
+              Icons.lock_clock,
+            ),
+            const SizedBox(height: 12),
+            _buildInfoCard(
               'How to disable',
-              'If Strict Mode is enabled, you will need to start a delay countdown timer before you can switch this option off. The option cannot be disabled until the countdown ends.',
+              'After the 30-day lock expires, if Strict Mode is enabled, you will need to start a delay countdown timer before you can switch this option off.',
               Icons.hourglass_bottom,
             ),
           ],
@@ -141,6 +155,7 @@ class UninstallProtectionScreen extends StatelessWidget {
             settings: vm.settings,
             onStartCountdown: () => vm.startDisableCountdown(featureKey),
             onDisableConfirmed: () => vm.toggleUninstallProtection(false),
+            onCancelCountdown: () => vm.clearDisableCountdown(),
           ),
         ),
       ),

@@ -4,6 +4,7 @@ import '../../../data/repositories/settings_repository.dart';
 import '../../../data/repositories/usage_repository.dart';
 import '../../../data/repositories/permission_repository.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../data/services/study_mode_service.dart';
 import '../../../core/viewmodel/base_viewmodel.dart';
 import '../../../core/viewmodel/view_state.dart';
 
@@ -14,10 +15,12 @@ class HomeViewModel extends BaseViewModel {
 
   AppSettings _settings = AppSettings();
   DailyUsageSummary? _summary;
+  DailyUsageSummary? _yesterdaySummary;
   bool _permissionsGranted = false;
 
   AppSettings get settings => _settings;
   DailyUsageSummary? get summary => _summary;
+  DailyUsageSummary? get yesterdaySummary => _yesterdaySummary;
   bool get permissionsGranted => _permissionsGranted;
 
   HomeViewModel({
@@ -50,7 +53,8 @@ class HomeViewModel extends BaseViewModel {
     final accessibility = await _permissionRepo.isAccessibilityServiceEnabled();
     final overlay = await _permissionRepo.isOverlayPermissionGranted();
     final notification = await _permissionRepo.isNotificationPermissionGranted();
-    return usage && accessibility && overlay && notification;
+    final dnd = await getIt<StudyModeService>().checkNotificationPolicyPermission();
+    return usage && accessibility && overlay && notification && dnd;
   }
 
   Future<void> refreshUsage() async {
@@ -59,6 +63,10 @@ class HomeViewModel extends BaseViewModel {
       return;
     }
     _summary = await _usageRepo.getUsageSummary();
+    final now = DateTime.now();
+    _yesterdaySummary = await _usageRepo.getUsageSummary(
+      targetDate: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1))
+    );
     notifyListeners();
   }
 
@@ -67,8 +75,7 @@ class HomeViewModel extends BaseViewModel {
 
     if (_settings.targetFeatureToDisable == feature && !_settings.isStrictModeDelayActive) {
       _settings = _settings.copyWith(
-        strictModeCountdownStart: null,
-        targetFeatureToDisable: null,
+        clearStrictModeState: true,
       );
       await _settingsRepo.setStrictModeCountdownStart(null);
       await _settingsRepo.setTargetFeatureToDisable(null);
@@ -126,9 +133,30 @@ class HomeViewModel extends BaseViewModel {
   }
 
   int get totalScreenMinutes => _summary?.totalScreen.inMinutes ?? 0;
+  int get yesterdayScreenMinutes => _yesterdaySummary?.totalScreen.inMinutes ?? 0;
+  
   int get socialMediaMinutes => _summary?.totalSocialMedia.inMinutes ?? 0;
   String get formattedScreenTime {
     final mins = totalScreenMinutes;
     return '${mins ~/ 60}h ${mins % 60}m';
+  }
+
+  String get screenTimeChangeText {
+    if (_yesterdaySummary == null || _summary == null) return 'Calculating...';
+    
+    if (yesterdayScreenMinutes == 0) {
+      if (totalScreenMinutes == 0) return 'Same as yesterday';
+      return '+100% from yesterday';
+    }
+    
+    final double change = ((totalScreenMinutes - yesterdayScreenMinutes) / yesterdayScreenMinutes) * 100;
+    
+    if (change > 0) {
+      return '+${change.toStringAsFixed(0)}% from yesterday';
+    } else if (change < 0) {
+      return '${change.toStringAsFixed(0)}% from yesterday';
+    } else {
+      return 'Same as yesterday';
+    }
   }
 }

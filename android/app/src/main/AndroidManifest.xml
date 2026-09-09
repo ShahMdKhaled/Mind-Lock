@@ -10,7 +10,7 @@
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
     <application
-        android:label="Mind Lock"
+        android:label="MindLock"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

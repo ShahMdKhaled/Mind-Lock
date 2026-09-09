@@ -2,7 +2,8 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'MindLock';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.0.1';
+  static const String appBuildNumber = '2';
 
   static const String keyReelsBlockerEnabled = 'reels_blocker_enabled';
   static const String keyReelsBlockedPackages = 'reels_blocked_packages';

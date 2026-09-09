@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import '../../../shared/widgets/strict_mode_dialog.dart';
+import '../../permissions/view/permission_screen.dart';
 import '../viewmodel/settings_viewmodel.dart';
 import '../../reels_blocker/view/reels_blocker_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -13,7 +16,11 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObserver {
+class _SettingsScreenState extends State<SettingsScreen>
+    with WidgetsBindingObserver {
+  String _version = AppConstants.appVersion;
+  String _buildNumber = AppConstants.appBuildNumber;
+
   @override
   void initState() {
     super.initState();
@@ -23,6 +30,19 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         context.read<SettingsViewModel>().checkPermissions();
       }
     });
+    _loadPackageInfo();
+  }
+
+  Future<void> _loadPackageInfo() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() {
+          _version = packageInfo.version;
+          _buildNumber = packageInfo.buildNumber;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -36,6 +56,14 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
     if (state == AppLifecycleState.resumed && mounted) {
       context.read<SettingsViewModel>().checkPermissions();
     }
+  }
+
+  bool _checkPermissions(SettingsViewModel vm) {
+    if (!vm.isAccessibilityEnabled || !vm.isOverlayGranted || !vm.isUsageGranted) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const PermissionScreen()));
+      return false;
+    }
+    return true;
   }
 
   @override
@@ -55,7 +83,10 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               'Reels Blocker',
               settings.reelsBlockerEnabled ? 'Active' : 'Disabled',
               Icons.block,
-              () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ReelsBlockerScreen())),
+              () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const ReelsBlockerScreen())),
             ),
             _buildConfigurableSettingTile(
               title: 'Uninstall Protection',
@@ -63,12 +94,25 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               icon: Icons.security,
               value: settings.uninstallProtectionEnabled,
               onChanged: (v) {
+                if (v && !_checkPermissions(vm)) return;
                 if (!v && settings.uninstallProtectionEnabled) {
+                  if (settings.isUninstallProtectionActive) {
+                    final remaining = settings.uninstallProtectionRemaining;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Locked for 30 days! ${remaining.inDays} days remaining.'),
+                      backgroundColor: AppColors.danger,
+                    ));
+                    return;
+                  }
                   if (settings.strictModeEnabled) {
-                    if (settings.targetFeatureToDisable == 'uninstall_protection' && !settings.isStrictModeDelayActive && settings.strictModeCountdownStart != null) {
+                    if (settings.targetFeatureToDisable ==
+                            'uninstall_protection' &&
+                        !settings.isStrictModeDelayActive &&
+                        settings.strictModeCountdownStart != null) {
                       vm.toggleUninstallProtection(false);
                     } else {
-                      _showCountdownOrStartDialog(context, vm, 'uninstall_protection', 'Uninstall Protection');
+                      _showCountdownOrStartDialog(context, vm,
+                          'uninstall_protection', 'Uninstall Protection');
                     }
                   } else {
                     vm.toggleUninstallProtection(false);
@@ -87,11 +131,15 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               icon: Icons.lock_clock,
               value: settings.strictModeEnabled,
               onChanged: (v) {
+                if (v && !_checkPermissions(vm)) return;
                 if (!v && settings.strictModeEnabled) {
-                  if (settings.targetFeatureToDisable == 'strict_mode' && !settings.isStrictModeDelayActive && settings.strictModeCountdownStart != null) {
+                  if (settings.targetFeatureToDisable == 'strict_mode' &&
+                      !settings.isStrictModeDelayActive &&
+                      settings.strictModeCountdownStart != null) {
                     vm.toggleStrictMode(false);
                   } else {
-                    _showCountdownOrStartDialog(context, vm, 'strict_mode', 'Strict Mode');
+                    _showCountdownOrStartDialog(
+                        context, vm, 'strict_mode', 'Strict Mode');
                   }
                 } else {
                   vm.toggleStrictMode(v);
@@ -101,20 +149,14 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Delay Duration', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                    const Text('Delay Duration',
+                        style: TextStyle(
+                            color: AppColors.textSecondary, fontSize: 14)),
                     Row(
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove, size: 20, color: AppColors.primary),
-                          onPressed: settings.strictModeDelayMinutes > 1
-                              ? () => vm.updateStrictModeDelay(settings.strictModeDelayMinutes - 1)
-                              : null,
-                        ),
-                        Text('${settings.strictModeDelayMinutes} sec', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        IconButton(
-                          icon: const Icon(Icons.add, size: 20, color: AppColors.primary),
-                          onPressed: () => vm.updateStrictModeDelay(settings.strictModeDelayMinutes + 1),
-                        ),
+                        Text('${settings.strictModeDelayMinutes} mins',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14)),
                       ],
                     ),
                   ],
@@ -128,55 +170,22 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               subtitle: 'Get reminders to take a break',
               icon: Icons.av_timer,
               value: settings.breakEnabled,
-              onChanged: (v) => vm.toggleBreakEnabled(v),
+              onChanged: (v) {
+                if (v && !_checkPermissions(vm)) return;
+                vm.toggleBreakEnabled(v);
+              },
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Break Interval', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                    const Text('Break Interval',
+                        style: TextStyle(
+                            color: AppColors.textSecondary, fontSize: 14)),
                     Row(
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove, size: 20, color: AppColors.primary),
-                          onPressed: settings.breakIntervalMinutes > 1
-                              ? () => vm.updateBreakIntervalMinutes(settings.breakIntervalMinutes - 1)
-                              : null,
-                        ),
-                        Text('${settings.breakIntervalMinutes} min', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        IconButton(
-                          icon: const Icon(Icons.add, size: 20, color: AppColors.primary),
-                          onPressed: () => vm.updateBreakIntervalMinutes(settings.breakIntervalMinutes + 1),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            _buildConfigurableSettingTile(
-              title: 'Daily Scroll Limit',
-              subtitle: 'Set maximum daily browsing time',
-              icon: Icons.hourglass_bottom,
-              value: settings.scrollLimitEnabled,
-              onChanged: (v) => vm.toggleScrollLimit(v),
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Scroll Limit', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove, size: 20, color: AppColors.primary),
-                          onPressed: settings.scrollLimitMinutes > 5
-                              ? () => vm.updateScrollLimitMinutes(settings.scrollLimitMinutes - 5)
-                              : null,
-                        ),
-                        Text('${settings.scrollLimitMinutes} min', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        IconButton(
-                          icon: const Icon(Icons.add, size: 20, color: AppColors.primary),
-                          onPressed: () => vm.updateScrollLimitMinutes(settings.scrollLimitMinutes + 5),
-                        ),
+                        Text('${settings.breakIntervalMinutes} min',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14)),
                       ],
                     ),
                   ],
@@ -186,6 +195,61 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
             const SizedBox(height: 24),
             _buildSectionHeader('Permissions Status'),
             _buildPermissionsCard(context, vm),
+            const SizedBox(height: 24),
+            _buildSectionHeader('About'),
+            Container(
+              decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.cardBorder)),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.info_outline, color: AppColors.primary),
+                    title: const Text('About Us', style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                    onTap: () {
+                      showAboutDialog(
+                        context: context,
+                        applicationName: 'MindLock',
+                        applicationVersion: '1.0.0',
+                        applicationIcon: const Icon(Icons.lock, size: 48, color: AppColors.primary),
+                        applicationLegalese: '© 2026 MindLock',
+                        children: [
+                          const SizedBox(height: 16),
+                          const Text('MindLock is your digital wellness guardian. Control social media usage, stop doomscrolling, and protect your focus.'),
+                        ],
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, color: AppColors.cardBorder),
+                  ListTile(
+                    leading: const Icon(Icons.privacy_tip_outlined, color: AppColors.primary),
+                    title: const Text('Privacy Policy', style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                    onTap: () async {
+                      final Uri url = Uri.parse('https://sites.google.com/view/mind-lock/home');
+                      if (!await launchUrl(url)) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Could not open Privacy Policy')),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  const Divider(height: 1, color: AppColors.cardBorder),
+                  ListTile(
+                    leading: const Icon(Icons.code, color: AppColors.primary),
+                    title: const Text('Version', style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: Text(
+                      '$_version ($_buildNumber)',
+                      style: const TextStyle(color: AppColors.textMuted),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -195,7 +259,12 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12, left: 4),
-      child: Text(title.toUpperCase(), style: const TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+      child: Text(title.toUpperCase(),
+          style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2)),
     );
   }
 
@@ -209,12 +278,16 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.cardBorder)),
+      decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.cardBorder)),
       child: Column(
         children: [
           ListTile(
             leading: Icon(icon, color: AppColors.primary),
-            title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+            title: Text(title,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
             trailing: Switch(value: value, onChanged: onChanged),
           ),
@@ -232,10 +305,14 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
     );
   }
 
-  Widget _buildActionTile(String title, String value, IconData icon, VoidCallback onTap) {
+  Widget _buildActionTile(
+      String title, String value, IconData icon, VoidCallback onTap) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.cardBorder)),
+      decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.cardBorder)),
       child: ListTile(
         onTap: onTap,
         leading: Icon(icon, color: AppColors.primary),
@@ -243,7 +320,9 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(value, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+            Text(value,
+                style: const TextStyle(
+                    color: AppColors.primary, fontWeight: FontWeight.bold)),
             const SizedBox(width: 8),
             const Icon(Icons.chevron_right, color: AppColors.textMuted),
           ],
@@ -262,19 +341,27 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
       ),
       child: Column(
         children: [
-          _buildPermissionItem('Usage Access', vm.isUsageGranted, () => vm.requestUsage()),
+          _buildPermissionItem(
+              'Usage Access', vm.isUsageGranted, () => vm.requestUsage()),
           const Divider(height: 24, color: AppColors.cardBorder),
-          _buildPermissionItem('Accessibility Service', vm.isAccessibilityEnabled, () => vm.requestAccessibility()),
+          _buildPermissionItem('Accessibility Service',
+              vm.isAccessibilityEnabled, () => vm.requestAccessibility()),
           const Divider(height: 24, color: AppColors.cardBorder),
-          _buildPermissionItem('Display Over Other Apps', vm.isOverlayGranted, () => vm.requestOverlay()),
+          _buildPermissionItem('Display Over Other Apps', vm.isOverlayGranted,
+              () => vm.requestOverlay()),
           const Divider(height: 24, color: AppColors.cardBorder),
-          _buildPermissionItem('Notifications', vm.isNotificationGranted, () => vm.requestNotification()),
+          _buildPermissionItem('Notifications', vm.isNotificationGranted,
+              () => vm.requestNotification()),
+          const Divider(height: 24, color: AppColors.cardBorder),
+          _buildPermissionItem('Do Not Disturb (Study Mode)', vm.isDndGranted,
+              () => vm.requestDnd()),
         ],
       ),
     );
   }
 
-  Widget _buildPermissionItem(String name, bool isGranted, VoidCallback onRequest) {
+  Widget _buildPermissionItem(
+      String name, bool isGranted, VoidCallback onRequest) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -282,7 +369,9 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              Text(name,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14)),
               const SizedBox(height: 4),
               Row(
                 children: [
@@ -295,7 +384,8 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                   Text(
                     isGranted ? 'Granted' : 'Missing',
                     style: TextStyle(
-                      color: isGranted ? AppColors.success : AppColors.textMuted,
+                      color:
+                          isGranted ? AppColors.success : AppColors.textMuted,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -311,15 +401,18 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Grant', style: TextStyle(color: Colors.white, fontSize: 12)),
+            child: const Text('Grant',
+                style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
       ],
     );
   }
 
-  void _showCountdownOrStartDialog(BuildContext context, SettingsViewModel vm, String featureKey, String featureName) {
+  void _showCountdownOrStartDialog(BuildContext context, SettingsViewModel vm,
+      String featureKey, String featureName) {
     showDialog(
       context: context,
       builder: (ctx) => ChangeNotifierProvider.value(
@@ -337,6 +430,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
                 vm.toggleStrictMode(false);
               }
             },
+            onCancelCountdown: () => vm.clearDisableCountdown(),
           ),
         ),
       ),

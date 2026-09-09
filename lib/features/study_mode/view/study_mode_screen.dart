@@ -71,7 +71,7 @@ class _StudyModeScreenContent extends StatelessWidget {
                         ],
                       ),
                       circularStrokeCap: CircularStrokeCap.round,
-                      progressColor: vm.overtimeSeconds > 0 ? Colors.orangeAccent : AppColors.secondary,
+                      progressColor: vm.overtimeSeconds > 0 ? Colors.orangeAccent : AppColors.primary,
                       backgroundColor: AppColors.surfaceVariant,
                       animation: true,
                       animateFromLastPercent: true,
@@ -99,6 +99,19 @@ class _StudyModeScreenContent extends StatelessWidget {
                             icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 30),
                             onPressed: () => vm.setDuration(vm.selectedMinutes + 5),
                           ),
+                        ],
+                      ),
+                    ] else ...[
+                      const Text('Extend Time', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildExtendButton(context, vm, 5),
+                          const SizedBox(width: 12),
+                          _buildExtendButton(context, vm, 10),
+                          const SizedBox(width: 12),
+                          _buildExtendButton(context, vm, 20),
                         ],
                       ),
                     ],
@@ -136,10 +149,10 @@ class _StudyModeScreenContent extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
                         decoration: BoxDecoration(
-                          gradient: vm.isActive ? null : AppColors.studyGradient,
+                          gradient: vm.isActive ? null : AppColors.primaryGradient,
                           color: vm.isActive ? AppColors.surfaceVariant : null,
                           borderRadius: BorderRadius.circular(30),
-                          boxShadow: vm.isActive ? [] : [BoxShadow(color: AppColors.secondary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 10))],
+                          boxShadow: vm.isActive ? [] : [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 10))],
                         ),
                         child: Text(
                           vm.isActive ? 'Stop & Save' : 'Start Focus',
@@ -188,7 +201,7 @@ class _StudyModeScreenContent extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _buildCard('Today', '${vm.todayMinutes}m', AppColors.primary),
+          child: _buildCard('Today', '${vm.todayMinutes}m', AppColors.surfaceVariant, isHighlight: true),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -198,19 +211,20 @@ class _StudyModeScreenContent extends StatelessWidget {
     );
   }
 
-  Widget _buildCard(String title, String value, Color color) {
+  Widget _buildCard(String title, String value, Color color, {bool isHighlight = false}) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(20),
+        border: isHighlight ? Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5) : Border.all(color: AppColors.cardBorder, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title, style: const TextStyle(color: AppColors.textMuted, fontSize: 14)),
           const SizedBox(height: 8),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+          Text(value, style: TextStyle(color: isHighlight ? AppColors.primary : Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -222,7 +236,7 @@ class _StudyModeScreenContent extends StatelessWidget {
     }
 
     final sortedEntries = vm.dailyStats.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+      ..sort((a, b) => a.key.compareTo(b.key)); // Oldest first
       
     final List<BarChartGroupData> barGroups = [];
     double maxVal = 0;
@@ -236,9 +250,10 @@ class _StudyModeScreenContent extends StatelessWidget {
           barRods: [
             BarChartRodData(
               toY: val,
-              color: AppColors.secondary,
-              width: 12,
+              color: AppColors.primary,
+              width: 8,
               borderRadius: BorderRadius.circular(4),
+              backDrawRodData: BackgroundBarChartRodData(show: true, toY: maxVal == 0 ? 60 : maxVal * 1.2, color: AppColors.cardBorder.withValues(alpha: 0.3)),
             ),
           ],
         ),
@@ -246,19 +261,74 @@ class _StudyModeScreenContent extends StatelessWidget {
     }
 
     return Container(
-      height: 200,
-      padding: const EdgeInsets.all(16),
+      height: 250,
+      padding: const EdgeInsets.only(top: 24, right: 16, left: 0, bottom: 8),
       decoration: BoxDecoration(
         color: AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: BarChart(
         BarChartData(
           alignment: BarChartAlignment.spaceAround,
           maxY: maxVal == 0 ? 60 : maxVal * 1.2,
-          titlesData: FlTitlesData(show: false),
+          barTouchData: BarTouchData(
+            enabled: true,
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipColor: (group) => AppColors.surface,
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                final dateStr = sortedEntries[group.x.toInt()].key;
+                return BarTooltipItem(
+                  '$dateStr\n${rod.toY.toInt()} mins',
+                  const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                );
+              },
+            ),
+          ),
+          titlesData: FlTitlesData(
+            show: true,
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  final index = value.toInt();
+                  // Show label every 5 days to avoid crowding
+                  if (index % 5 != 0 || index >= sortedEntries.length) return const Text('');
+                  
+                  final dateStr = sortedEntries[index].key; // Format: 2026-08-20
+                  final parts = dateStr.split('-');
+                  if (parts.length == 3) {
+                    final day = parts[2];
+                    final month = parts[1];
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text('$day/$month', style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+                    );
+                  }
+                  return const Text('');
+                },
+                reservedSize: 28,
+              ),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40,
+                getTitlesWidget: (value, meta) {
+                  if (value == 0 || value == meta.max) return const Text('');
+                  return Text('${value.toInt()}m', style: const TextStyle(color: AppColors.textMuted, fontSize: 10));
+                },
+              ),
+            ),
+          ),
           borderData: FlBorderData(show: false),
-          gridData: FlGridData(show: false),
+          gridData: FlGridData(
+            show: true, 
+            drawVerticalLine: false,
+            getDrawingHorizontalLine: (value) => FlLine(color: AppColors.cardBorder.withValues(alpha: 0.3), strokeWidth: 1),
+          ),
           barGroups: barGroups,
         ),
       ),
@@ -278,7 +348,7 @@ class _StudyModeScreenContent extends StatelessWidget {
         return ListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(entry.key, style: const TextStyle(color: Colors.white)),
-          trailing: Text('${entry.value} mins', style: const TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold)),
+          trailing: Text('${entry.value} mins', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
         );
       },
     );
@@ -304,9 +374,25 @@ class _StudyModeScreenContent extends StatelessWidget {
               Navigator.pop(ctx);
               PermissionService().openNotificationPolicySettings();
             },
-            child: const Text('Open Settings', style: TextStyle(color: AppColors.secondary)),
+            child: const Text('Open Settings', style: TextStyle(color: AppColors.primary)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildExtendButton(BuildContext context, StudyModeViewModel vm, int minutes) {
+    return InkWell(
+      onTap: () => vm.extendDuration(minutes),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+        ),
+        child: Text('+$minutes min', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }

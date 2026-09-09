@@ -14,7 +14,10 @@ class StrictModeScreen extends StatelessWidget {
     final settings = vm.settings;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Strict Mode'), elevation: 0, backgroundColor: Colors.transparent),
+      appBar: AppBar(
+          title: const Text('Strict Mode'),
+          elevation: 0,
+          backgroundColor: Colors.transparent),
       extendBodyBehindAppBar: true,
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
@@ -28,11 +31,16 @@ class StrictModeScreen extends StatelessWidget {
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: settings.strictModeEnabled ? AppColors.warning.withValues(alpha: 0.5) : AppColors.cardBorder,
+                    color: settings.strictModeEnabled
+                        ? AppColors.warning.withValues(alpha: 0.5)
+                        : AppColors.cardBorder,
                   ),
                   boxShadow: [
                     if (settings.strictModeEnabled)
-                      BoxShadow(color: AppColors.warning.withValues(alpha: 0.1), blurRadius: 20, spreadRadius: 5)
+                      BoxShadow(
+                          color: AppColors.warning.withValues(alpha: 0.1),
+                          blurRadius: 20,
+                          spreadRadius: 5)
                   ],
                 ),
                 child: Column(
@@ -44,9 +52,16 @@ class StrictModeScreen extends StatelessWidget {
                           child: const Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Master Shield', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                              Text('Master Shield',
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary)),
                               SizedBox(height: 4),
-                              Text('Add a delay timer before disabling limits', style: TextStyle(fontSize: 14, color: AppColors.textMuted)),
+                              Text('Add a delay timer before disabling limits',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textMuted)),
                             ],
                           ),
                         ),
@@ -54,10 +69,14 @@ class StrictModeScreen extends StatelessWidget {
                           value: settings.strictModeEnabled,
                           onChanged: (v) {
                             if (!v && settings.strictModeEnabled) {
-                              if (settings.targetFeatureToDisable == 'strict_mode' && !settings.isStrictModeDelayActive && settings.strictModeCountdownStart != null) {
+                              if (settings.targetFeatureToDisable ==
+                                      'strict_mode' &&
+                                  !settings.isStrictModeDelayActive &&
+                                  settings.strictModeCountdownStart != null) {
                                 vm.toggleStrictMode(false);
                               } else {
-                                _showCountdownOrStartDialog(context, vm, 'strict_mode', 'Strict Mode');
+                                _showCountdownOrStartDialog(
+                                    context, vm, 'strict_mode', 'Strict Mode');
                               }
                             } else {
                               vm.toggleStrictMode(v);
@@ -73,12 +92,20 @@ class StrictModeScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Delay Duration', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text('${settings.strictModeDelayMinutes} sec', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
+                          const Text('Delay Duration',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('${settings.strictModeDelayMinutes} mins',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: AppColors.primary)),
                         ],
                       ),
                       Slider(
-                        value: settings.strictModeDelayMinutes.toDouble().clamp(1.0, 300.0),
+                        value: settings.strictModeDelayMinutes
+                            .toDouble()
+                            .clamp(1.0, 300.0),
                         min: 1,
                         max: 300,
                         activeColor: AppColors.primary,
@@ -92,12 +119,14 @@ class StrictModeScreen extends StatelessWidget {
                           padding: const EdgeInsets.only(bottom: 12),
                           child: Row(
                             children: [
-                              const Icon(Icons.lock, size: 16, color: AppColors.danger),
+                              const Icon(Icons.lock,
+                                  size: 16, color: AppColors.danger),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'Locked until ${settings.strictModeDelayLockedUntil!.day}/${settings.strictModeDelayLockedUntil!.month}/${settings.strictModeDelayLockedUntil!.year}',
-                                  style: const TextStyle(color: AppColors.danger, fontSize: 12),
+                                  style: const TextStyle(
+                                      color: AppColors.danger, fontSize: 12),
                                 ),
                               ),
                             ],
@@ -112,16 +141,22 @@ class StrictModeScreen extends StatelessWidget {
                                   await vm.saveStrictModeDelay();
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Duration saved and locked for 15 days!')),
+                                      const SnackBar(
+                                          content: Text(
+                                              'Duration saved and locked for 15 days!')),
                                     );
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('Save Configuration', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          child: const Text('Save Configuration',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],
@@ -133,7 +168,11 @@ class StrictModeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
                   'INFO & DETAILS',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                  style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2),
                 ),
               ),
               const SizedBox(height: 12),
@@ -172,9 +211,15 @@ class StrictModeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 6),
-                Text(desc, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+                Text(desc,
+                    style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        height: 1.4)),
               ],
             ),
           ),
@@ -183,7 +228,8 @@ class StrictModeScreen extends StatelessWidget {
     );
   }
 
-  void _showCountdownOrStartDialog(BuildContext context, SettingsViewModel vm, String featureKey, String featureName) {
+  void _showCountdownOrStartDialog(BuildContext context, SettingsViewModel vm,
+      String featureKey, String featureName) {
     showDialog(
       context: context,
       builder: (ctx) => ChangeNotifierProvider.value(
@@ -195,6 +241,7 @@ class StrictModeScreen extends StatelessWidget {
             settings: vm.settings,
             onStartCountdown: () => vm.startDisableCountdown(featureKey),
             onDisableConfirmed: () => vm.toggleStrictMode(false),
+            onCancelCountdown: () => vm.clearDisableCountdown(),
           ),
         ),
       ),

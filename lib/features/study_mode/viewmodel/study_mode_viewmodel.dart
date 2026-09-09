@@ -74,6 +74,13 @@ class StudyModeViewModel extends BaseViewModel {
     }
   }
 
+  void extendDuration(int addMinutes) {
+    if (_isActive) {
+      _selectedMinutes += addMinutes;
+      notifyListeners();
+    }
+  }
+
   Future<bool> checkPermission() async {
     return await _studyModeService.checkNotificationPolicyPermission();
   }

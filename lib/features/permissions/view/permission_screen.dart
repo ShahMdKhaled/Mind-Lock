@@ -62,7 +62,7 @@ class _PermissionScreenContent extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(AppConstants.pagePadding),
                 child: Text(
-                  'To work correctly, MindLock needs the following permissions. Your data stays private on your device.',
+                  'MindLock needs these permissions to work. Your data stays private.',
                   style: TextStyle(color: AppColors.textMuted, fontSize: 14),
                   textAlign: TextAlign.center,
                 ),
@@ -71,10 +71,11 @@ class _PermissionScreenContent extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: AppConstants.pagePadding),
                   children: [
-                    _buildPermissionTile('Usage Access', 'Required to track time spent on social media apps.', Icons.insights, vm.isUsageGranted, () => vm.requestUsage()),
-                    _buildPermissionTile('Accessibility Service', 'Required to detect and block reels/shorts in real-time.', Icons.accessibility_new, vm.isAccessibilityEnabled, () => vm.requestAccessibility()),
-                    _buildPermissionTile('Display Over Other Apps', 'Required to show blocking screen over other apps.', Icons.layers, vm.isOverlayGranted, () => vm.requestOverlay()),
-                    _buildPermissionTile('Notifications', 'Required to send break reminders and daily summaries.', Icons.notifications, vm.isNotificationGranted, () => vm.requestNotification()),
+                    _buildPermissionTile('Usage Access', 'Tracks social media time.', Icons.insights, vm.isUsageGranted, () => _showPermissionGuide(context, 'Usage Access', 'Look for "MindLock" in the list and allow usage tracking.', vm.requestUsage)),
+                    _buildPermissionTile('Accessibility Service', 'Blocks reels & shorts.', Icons.accessibility_new, vm.isAccessibilityEnabled, () => _showPermissionGuide(context, 'Accessibility Service', 'Look for "MindLock" in the downloaded apps or installed services list and turn it ON.', vm.requestAccessibility)),
+                    _buildPermissionTile('Display Over Other Apps', 'Shows blocking screen.', Icons.layers, vm.isOverlayGranted, () => _showPermissionGuide(context, 'Display Over Other Apps', 'Look for "MindLock" in the list and allow display over other apps.', vm.requestOverlay)),
+                    _buildPermissionTile('Notifications', 'Sends reminders.', Icons.notifications, vm.isNotificationGranted, () => _showPermissionGuide(context, 'Notifications', 'Allow notifications for MindLock.', vm.requestNotification)),
+                    _buildPermissionTile('Do Not Disturb', 'Used by Study Mode.', Icons.do_not_disturb_on, vm.isDndGranted, () => _showPermissionGuide(context, 'Do Not Disturb Access', 'Allow MindLock to manage Do Not Disturb so Study Mode can block interruptions.', vm.requestDnd)),
                   ],
                 ),
               ),
@@ -125,6 +126,72 @@ class _PermissionScreenContent extends StatelessWidget {
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(horizontal: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                 child: const Text('Grant', style: TextStyle(color: Colors.white, fontSize: 12)),
               ),
+      ),
+    );
+  }
+
+  void _showPermissionGuide(BuildContext context, String title, String instruction, VoidCallback onProceed) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceVariant,
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline, color: AppColors.primary),
+            const SizedBox(width: 10),
+            Expanded(child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 18))),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(instruction, style: const TextStyle(color: AppColors.textPrimary, fontSize: 15)),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.touch_app, color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Text("Scroll down to find MindLock and toggle it ON", 
+                      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ],
+              ),
+            )
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onProceed();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Go to Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

@@ -9,6 +9,7 @@ class StrictModeDialog extends StatefulWidget {
   final AppSettings settings;
   final Future<void> Function() onStartCountdown;
   final VoidCallback onDisableConfirmed;
+  final VoidCallback onCancelCountdown;
 
   const StrictModeDialog({
     super.key,
@@ -17,6 +18,7 @@ class StrictModeDialog extends StatefulWidget {
     required this.settings,
     required this.onStartCountdown,
     required this.onDisableConfirmed,
+    required this.onCancelCountdown,
   });
 
   @override
@@ -46,6 +48,9 @@ class _StrictModeDialogState extends State<StrictModeDialog> {
   @override
   void dispose() {
     _timer?.cancel();
+    if (widget.settings.isStrictModeDelayActive && widget.settings.targetFeatureToDisable == widget.featureKey) {
+      widget.onCancelCountdown();
+    }
     super.dispose();
   }
 
@@ -102,7 +107,7 @@ class _StrictModeDialogState extends State<StrictModeDialog> {
     } else {
       return AlertDialog(
         title: const Text('Start Delay Timer?'),
-        content: Text('Strict Mode is active. To disable ${widget.featureName}, you must start a ${settings.strictModeDelayMinutes}-second timer. The option cannot be disabled until the timer ends.'),
+        content: Text('Strict Mode is active. To disable ${widget.featureName}, you must start a ${settings.strictModeDelayMinutes}-minute timer. The option cannot be disabled until the timer ends.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           TextButton(

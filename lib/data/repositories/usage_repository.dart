@@ -6,11 +6,11 @@ class UsageRepository {
 
   UsageRepository({required UsageDataService usageDataService}) : _usageDataService = usageDataService;
 
-  Future<DailyUsageSummary> getUsageSummary() async {
-    return await _usageDataService.getUsageSummary();
+  Future<DailyUsageSummary> getUsageSummary({DateTime? targetDate}) async {
+    return await _usageDataService.getUsageSummary(targetDate: targetDate);
   }
 
-  Future<List<MindLockUsageInfo>> getDailyUsage() async {
-    return await _usageDataService.getDailyUsage();
+  Future<List<MindLockUsageInfo>> getDailyUsage({DateTime? targetDate}) async {
+    return await _usageDataService.getDailyUsage(targetDate: targetDate);
   }
 }

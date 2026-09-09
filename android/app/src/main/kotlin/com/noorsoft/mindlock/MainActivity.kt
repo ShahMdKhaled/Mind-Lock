@@ -74,21 +74,57 @@ class MainActivity : FlutterActivity() {
                 }
                 "openAccessibilitySettings" -> {
                     val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    startActivity(intent)
+                    // Trick to try to highlight/open the specific service on some Android versions
+                    val componentName = android.content.ComponentName(packageName, MindLockAccessibilityService::class.java.name).flattenToString()
+                    intent.putExtra(":settings:fragment_args_key", componentName)
+                    intent.putExtra(":settings:show_fragment_args", android.os.Bundle().apply { putString(":settings:fragment_args_key", componentName) })
+                    try {
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    }
                     result.success(true)
                 }
                 "openUsageAccessSettings" -> {
                     val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                    startActivity(intent)
+                    intent.data = android.net.Uri.parse("package:$packageName")
+                    intent.putExtra(":settings:fragment_args_key", packageName)
+                    intent.putExtra(":settings:show_fragment_args", android.os.Bundle().apply { putString(":settings:fragment_args_key", packageName) })
+                    try {
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                    }
                     result.success(true)
                 }
                 "isNotificationPolicyAccessGranted" -> {
                     val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                     result.success(notificationManager.isNotificationPolicyAccessGranted)
                 }
+                "openOverlaySettings" -> {
+                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                    intent.data = android.net.Uri.parse("package:$packageName")
+                    intent.putExtra(":settings:fragment_args_key", packageName)
+                    intent.putExtra(":settings:show_fragment_args", android.os.Bundle().apply { putString(":settings:fragment_args_key", packageName) })
+                    android.widget.Toast.makeText(applicationContext, "Please scroll down to find MindLock", android.widget.Toast.LENGTH_LONG).show()
+                    try {
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
+                    }
+                    result.success(true)
+                }
                 "openNotificationPolicySettings" -> {
                     val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-                    startActivity(intent)
+                    intent.data = android.net.Uri.parse("package:$packageName")
+                    intent.putExtra(":settings:fragment_args_key", packageName)
+                    intent.putExtra(":settings:show_fragment_args", android.os.Bundle().apply { putString(":settings:fragment_args_key", packageName) })
+                    android.widget.Toast.makeText(applicationContext, "Please scroll down to find MindLock", android.widget.Toast.LENGTH_LONG).show()
+                    try {
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+                    }
                     result.success(true)
                 }
                 "setNotificationPolicyControl" -> {

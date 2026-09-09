@@ -53,4 +53,12 @@ class StudyModeService {
       return false;
     }
   }
+
+  Future<void> requestNotificationPolicyPermission() async {
+    try {
+      await _channel.invokeMethod('openNotificationPolicySettings');
+    } catch (e) {
+      // Ignored
+    }
+  }
 }

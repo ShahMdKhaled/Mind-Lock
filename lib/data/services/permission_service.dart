@@ -48,7 +48,11 @@ class PermissionService {
   }
 
   Future<void> requestOverlayPermission() async {
-    await Permission.systemAlertWindow.request();
+    try {
+      await _channel.invokeMethod('openOverlaySettings');
+    } catch (e) {
+      await Permission.systemAlertWindow.request();
+    }
   }
 
   Future<void> openNotificationPolicySettings() async {

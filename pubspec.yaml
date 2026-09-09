@@ -2,7 +2,7 @@ name: mindlock
 description: "MindLock - Your Digital Wellness Guardian. Control social media usage and protect your focus."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.2+3
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -44,6 +44,8 @@ dependencies:
   # Device Features
   volume_controller: 3.4.4
   wakelock_plus: ^1.2.10
+  url_launcher: ^6.3.2
+  package_info_plus: ^10.2.1
 
 dev_dependencies:
   flutter_test:

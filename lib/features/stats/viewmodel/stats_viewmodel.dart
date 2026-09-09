@@ -8,8 +8,10 @@ class StatsViewModel extends BaseViewModel {
   final UsageRepository _usageRepo;
 
   DailyUsageSummary? _summary;
+  List<DailyUsageSummary> _weeklyData = [];
 
   DailyUsageSummary? get summary => _summary;
+  List<DailyUsageSummary> get weeklyData => _weeklyData;
 
   StatsViewModel({UsageRepository? usageRepo}) : _usageRepo = usageRepo ?? getIt<UsageRepository>();
 
@@ -17,6 +19,17 @@ class StatsViewModel extends BaseViewModel {
     setState(ViewState.loading);
     try {
       _summary = await _usageRepo.getUsageSummary();
+      
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      
+      // Fetch last 7 days including today
+      List<Future<DailyUsageSummary>> futures = [];
+      for (int i = 6; i >= 0; i--) {
+        futures.add(_usageRepo.getUsageSummary(targetDate: today.subtract(Duration(days: i))));
+      }
+      _weeklyData = await Future.wait(futures);
+      
       setState(ViewState.idle);
     } catch (e) {
       setError(e.toString());

@@ -14,10 +14,11 @@ class UsageDataService {
   static UsageDataService get instance => _instance ??= UsageDataService._();
   UsageDataService._();
 
-  Future<List<MindLockUsageInfo>> getDailyUsage() async {
+  Future<List<MindLockUsageInfo>> getDailyUsage({DateTime? targetDate}) async {
     try {
-      DateTime endDate = DateTime.now();
-      DateTime startDate = DateTime(endDate.year, endDate.month, endDate.day);
+      DateTime now = targetDate ?? DateTime.now();
+      DateTime startDate = DateTime(now.year, now.month, now.day);
+      DateTime endDate = targetDate == null ? now : startDate.add(const Duration(days: 1));
 
       List<MindLockUsageInfo> infos = [];
 
@@ -28,8 +29,31 @@ class UsageDataService {
           'end': endDate.millisecondsSinceEpoch,
         });
 
-        List<AppInfo> installedApps =
-            await InstalledApps.getInstalledApps(true, false);
+        List<AppInfo> rawInstalledApps =
+            await InstalledApps.getInstalledApps(true, true);
+        
+        List<AppInfo> installedApps = rawInstalledApps.where((app) {
+          if (app.packageName == 'com.noorsoft.mindlock') return false;
+          final pkg = app.packageName.toLowerCase();
+          final allowedSystemApps = [
+            'com.google.android.youtube', 'com.android.chrome', 'com.google.android.gm',
+            'com.google.android.apps.maps', 'com.google.android.apps.photos', 'com.google.android.apps.docs',
+            'com.google.android.calculator', 'com.google.android.calendar', 'com.google.android.keep',
+          ];
+          if (allowedSystemApps.contains(pkg)) {
+            return true;
+          }
+          if (pkg.startsWith('com.android.') || pkg.startsWith('com.google.android.') ||
+              pkg.startsWith('com.samsung.') || pkg.startsWith('com.sec.') ||
+              pkg.startsWith('com.miui.') || pkg.startsWith('com.coloros.') ||
+              pkg.startsWith('com.oplus.') || pkg.startsWith('com.vivo.') ||
+              pkg.startsWith('com.huawei.') || pkg.startsWith('com.oneplus.') ||
+              pkg.startsWith('android')) {
+            return false;
+          }
+          return true;
+        }).toList();
+
         Map<String, AppInfo> appInfoMap = {
           for (var app in installedApps) app.packageName: app
         };
@@ -47,6 +71,7 @@ class UsageDataService {
                 appName: appName,
                 usage: Duration(milliseconds: durationMs),
                 date: startDate,
+                icon: appInfo.icon,
               ));
             }
           }
@@ -75,6 +100,7 @@ class UsageDataService {
             appName: appName,
             usage: usage.usage,
             date: startDate,
+            icon: appInfo.icon,
           ));
         }
       }
@@ -86,8 +112,8 @@ class UsageDataService {
     }
   }
 
-  Future<DailyUsageSummary> getUsageSummary() async {
-    final usages = await getDailyUsage();
+  Future<DailyUsageSummary> getUsageSummary({DateTime? targetDate}) async {
+    final usages = await getDailyUsage(targetDate: targetDate);
 
     Duration totalSocial = Duration.zero;
     Duration totalScreen = Duration.zero;
@@ -100,7 +126,7 @@ class UsageDataService {
     }
 
     return DailyUsageSummary(
-      date: DateTime.now(),
+      date: targetDate ?? DateTime.now(),
       totalSocialMedia: totalSocial,
       totalScreen: totalScreen,
       appUsages: usages,

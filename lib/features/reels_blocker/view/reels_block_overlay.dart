@@ -22,6 +22,8 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
   late Timer _timer;
   late String _currentQuote;
   bool _isBreak = false;
+  bool _isPunishment = false;
+  String _punishmentAppName = "App";
 
   final List<String> _quotes = [
     // Motivational Style
@@ -82,6 +84,20 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
         setState(() {
           _isBreak = true;
           _currentQuote = "Take a break! You've been using your phone. Rest your eyes for 10 seconds.";
+        });
+      } else if (type == 'punishment') {
+        final endTime = prefs.getInt('punishment_end_time') ?? 0;
+        final appName = prefs.getString('punishment_app_name') ?? "App";
+        final now = DateTime.now().millisecondsSinceEpoch;
+        int remaining = 30;
+        if (endTime > now) {
+          remaining = ((endTime - now) / 1000).ceil();
+        }
+        setState(() {
+          _isPunishment = true;
+          _punishmentAppName = appName;
+          _secondsRemaining = remaining > 0 ? remaining : 30;
+          _currentQuote = "You've tried to watch Reels too many times! $appName is blocked as a punishment.";
         });
       }
     } catch (e) {
@@ -163,9 +179,9 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
                   const SizedBox(height: 24),
                   // Title
                   Text(
-                    _isBreak ? "Break Time Active" : "Focus Mode Active",
+                    _isBreak ? "Break Time Active" : (_isPunishment ? "$_punishmentAppName Blocked" : "Focus Mode Active"),
                     style: TextStyle(
-                      color: _isBreak ? AppColors.secondary : AppColors.primary,
+                      color: _isBreak ? AppColors.secondary : (_isPunishment ? Colors.redAccent : AppColors.primary),
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 2,
@@ -192,10 +208,10 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
                         height: 60,
                         width: 60,
                         child: CircularProgressIndicator(
-                          value: _secondsRemaining / 10,
+                          value: _isPunishment ? (_secondsRemaining / 30) : (_secondsRemaining / 10),
                           strokeWidth: 6,
                           backgroundColor: Colors.white12,
-                          valueColor: AlwaysStoppedAnimation<Color>(_isBreak ? AppColors.secondary : AppColors.primary),
+                          valueColor: AlwaysStoppedAnimation<Color>(_isBreak ? AppColors.secondary : (_isPunishment ? Colors.redAccent : AppColors.primary)),
                         ),
                       ),
                       Text(

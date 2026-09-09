@@ -1,9 +1,12 @@
+import 'dart:typed_data';
+
 class MindLockUsageInfo {
   final String packageName;
   final String appName;
   final Duration usage;
   final DateTime date;
   final String? iconPath;
+  final Uint8List? icon;
 
   const MindLockUsageInfo({
     required this.packageName,
@@ -11,6 +14,7 @@ class MindLockUsageInfo {
     required this.usage,
     required this.date,
     this.iconPath,
+    this.icon,
   });
 
   String get formattedUsage {

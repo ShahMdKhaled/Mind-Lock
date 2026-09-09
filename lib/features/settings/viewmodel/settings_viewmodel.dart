@@ -4,6 +4,7 @@ import '../../../data/repositories/settings_repository.dart';
 import '../../../core/di/service_locator.dart';
 
 import '../../../data/repositories/permission_repository.dart';
+import '../../../data/services/study_mode_service.dart';
 
 class SettingsViewModel extends ChangeNotifier {
   final SettingsRepository _settingsRepo;
@@ -16,6 +17,7 @@ class SettingsViewModel extends ChangeNotifier {
   bool _isAccessibilityEnabled = false;
   bool _isOverlayGranted = false;
   bool _isNotificationGranted = false;
+  bool _isDndGranted = false;
 
   AppSettings get settings => _settings;
   bool get isLoading => _isLoading;
@@ -24,6 +26,7 @@ class SettingsViewModel extends ChangeNotifier {
   bool get isAccessibilityEnabled => _isAccessibilityEnabled;
   bool get isOverlayGranted => _isOverlayGranted;
   bool get isNotificationGranted => _isNotificationGranted;
+  bool get isDndGranted => _isDndGranted;
 
   SettingsViewModel({SettingsRepository? settingsRepo, PermissionRepository? permissionRepo})
       : _settingsRepo = settingsRepo ?? getIt<SettingsRepository>(),
@@ -47,6 +50,7 @@ class SettingsViewModel extends ChangeNotifier {
     _isAccessibilityEnabled = await _permissionRepo.isAccessibilityServiceEnabled();
     _isOverlayGranted = await _permissionRepo.isOverlayPermissionGranted();
     _isNotificationGranted = await _permissionRepo.isNotificationPermissionGranted();
+    _isDndGranted = await getIt<StudyModeService>().checkNotificationPolicyPermission();
     notifyListeners();
   }
 
@@ -68,13 +72,17 @@ class SettingsViewModel extends ChangeNotifier {
     await checkPermissions();
   }
 
+  Future<void> requestDnd() async {
+    await getIt<StudyModeService>().requestNotificationPolicyPermission();
+    await checkPermissions();
+  }
+
   Future<bool> requestDisableFeature(String feature) async {
     if (!_settings.strictModeEnabled) return true;
 
     if (_settings.targetFeatureToDisable == feature && !_settings.isStrictModeDelayActive) {
       _settings = _settings.copyWith(
-        strictModeCountdownStart: null,
-        targetFeatureToDisable: null,
+        clearStrictModeState: true,
       );
       await _settingsRepo.setStrictModeCountdownStart(null);
       await _settingsRepo.setTargetFeatureToDisable(null);
@@ -153,8 +161,7 @@ class SettingsViewModel extends ChangeNotifier {
     await _settingsRepo.setStrictModeEnabled(enabled);
     if (!enabled) {
       _settings = _settings.copyWith(
-        strictModeCountdownStart: null,
-        targetFeatureToDisable: null,
+        clearStrictModeState: true,
       );
       await _settingsRepo.setStrictModeCountdownStart(null);
       await _settingsRepo.setTargetFeatureToDisable(null);
@@ -198,8 +205,7 @@ class SettingsViewModel extends ChangeNotifier {
 
   Future<void> clearDisableCountdown() async {
     _settings = _settings.copyWith(
-      strictModeCountdownStart: null,
-      targetFeatureToDisable: null,
+      clearStrictModeState: true,
     );
     await _settingsRepo.setStrictModeCountdownStart(null);
     await _settingsRepo.setTargetFeatureToDisable(null);

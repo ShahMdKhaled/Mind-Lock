@@ -43,9 +43,44 @@ class AppLimitsViewModel extends ChangeNotifier {
 
     try {
       final apps = await InstalledApps.getInstalledApps(true, true);
-      _installedApps = apps
-          .where((app) => app.packageName != 'com.noorsoft.mindlock')
-          .toList();
+      _installedApps = apps.where((app) {
+        if (app.packageName == 'com.noorsoft.mindlock') return false;
+        
+        final pkg = app.packageName.toLowerCase();
+
+        // Allowed list of Google/Android apps that users typically want to limit
+        final allowedSystemApps = [
+          'com.google.android.youtube',
+          'com.android.chrome',
+          'com.google.android.gm', // Gmail
+          'com.google.android.apps.maps',
+          'com.google.android.apps.photos',
+          'com.google.android.apps.docs',
+          'com.google.android.calculator',
+          'com.google.android.calendar',
+          'com.google.android.keep',
+        ];
+
+        if (allowedSystemApps.contains(pkg)) {
+          return true;
+        }
+
+        // Manually filter out common system/manufacturer packages that might bypass the plugin's FLAG_SYSTEM check
+        if (pkg.startsWith('com.android.') ||
+            pkg.startsWith('com.google.android.') ||
+            pkg.startsWith('com.samsung.') ||
+            pkg.startsWith('com.sec.') ||
+            pkg.startsWith('com.miui.') ||
+            pkg.startsWith('com.coloros.') ||
+            pkg.startsWith('com.oplus.') ||
+            pkg.startsWith('com.vivo.') ||
+            pkg.startsWith('com.huawei.') ||
+            pkg.startsWith('com.oneplus.') ||
+            pkg.startsWith('android')) {
+          return false;
+        }
+        return true;
+      }).toList();
       _installedApps
           .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     } catch (e) {
@@ -76,8 +111,7 @@ class AppLimitsViewModel extends ChangeNotifier {
 
     if (_settings.targetFeatureToDisable == feature && !_settings.isStrictModeDelayActive) {
       _settings = _settings.copyWith(
-        strictModeCountdownStart: null,
-        targetFeatureToDisable: null,
+        clearStrictModeState: true,
       );
       await _settingsRepo.setStrictModeCountdownStart(null);
       await _settingsRepo.setTargetFeatureToDisable(null);
@@ -100,11 +134,20 @@ class AppLimitsViewModel extends ChangeNotifier {
 
   Future<void> toggleMasterShield(bool enabled) async {
     if (!enabled) {
-      final allowed = await requestDisableFeature('app_limits');
+      final allowed = await requestDisableFeature('app_limits_master');
       if (!allowed) return;
     }
     _settings = _settings.copyWith(appLimitsEnabled: enabled);
-    await _settingsRepo.saveSettings(_settings);
+    await _settingsRepo.setAppLimitsEnabled(enabled);
+    notifyListeners();
+  }
+
+  Future<void> clearDisableCountdown() async {
+    _settings = _settings.copyWith(
+      clearStrictModeState: true,
+    );
+    await _settingsRepo.setStrictModeCountdownStart(null);
+    await _settingsRepo.setTargetFeatureToDisable(null);
     notifyListeners();
   }
 

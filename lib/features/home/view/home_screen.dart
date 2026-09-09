@@ -14,6 +14,8 @@ import '../../settings/view/uninstall_protection_screen.dart';
 import '../../settings/view/strict_mode_screen.dart';
 import '../../settings/view/app_time_breaks_screen.dart';
 
+import '../../settings/view/daily_scroll_limit_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -140,8 +142,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20)),
-                child: const Text('+12% from yesterday',
-                    style: TextStyle(color: Colors.white, fontSize: 10)),
+                child: Text(vm.screenTimeChangeText,
+                    style: const TextStyle(color: Colors.white, fontSize: 10)),
               ),
             ],
           ),
@@ -346,53 +348,65 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildFeatureGrid(BuildContext context) {
+    final settings = context.watch<SettingsViewModel>().settings;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Optimization Tools',
             style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 16),
-        _buildFeatureItem('App Time Breaks', 'Get reminders every 20 mins',
-            Icons.av_timer, AppColors.primary),
-        _buildFeatureItem('Daily Scroll Limit', '30m remaining for today',
-            Icons.hourglass_bottom, AppColors.warning),
+        _buildFeatureItem(
+          'Daily Scroll Limit',
+          settings.scrollLimitEnabled ? '${settings.scrollLimitMinutes}m limit set for today' : 'Not enabled',
+          Icons.hourglass_bottom,
+          AppColors.warning,
+          () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const DailyScrollLimitScreen()),
+            );
+          },
+        ),
       ],
     );
   }
 
   Widget _buildFeatureItem(
-      String title, String subtitle, IconData icon, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 16)),
-                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-              ],
+      String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, color: color, size: 24),
             ),
-          ),
-          const Icon(Icons.chevron_right, color: AppColors.textMuted),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 16)),
+                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textMuted),
+          ],
+        ),
       ),
     );
   }
@@ -405,35 +419,53 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.1),
+        color: AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(AppConstants.cardRadius),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.6), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.warning.withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.warning_rounded, color: AppColors.warning, size: 24),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text('Permissions Required',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary)),
-                Text('Some features may not work correctly.',
-                    style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary)),
+                SizedBox(height: 2),
+                Text('App features are currently limited',
+                    style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
               ],
             ),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
                     builder: (context) => const PermissionScreen())),
-            child: const Text('Resolve',
-                style: TextStyle(
-                    color: AppColors.warning, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.warning,
+              foregroundColor: Colors.black,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('FIX NOW', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           ),
         ],
       ),
