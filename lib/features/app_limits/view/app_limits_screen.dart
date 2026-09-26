@@ -261,12 +261,7 @@ class _AppLimitsScreenContentState extends State<_AppLimitsScreenContent> {
     String packageName,
     int minutes,
   ) {
-    // Find matching app in installed list to get proper display name & icon
-    AppInfo? matchingApp;
-    try {
-      matchingApp =
-          vm.filteredApps.firstWhere((app) => app.packageName == packageName);
-    } catch (_) {}
+    AppInfo? matchingApp = vm.getCachedAppInfo(packageName);
 
     final appName = matchingApp?.name ?? packageName.split('.').last;
 

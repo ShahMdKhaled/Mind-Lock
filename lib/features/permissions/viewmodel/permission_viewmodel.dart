@@ -12,13 +12,15 @@ class PermissionViewModel extends BaseViewModel {
   bool _isOverlayGranted = false;
   bool _isNotificationGranted = false;
   bool _isDndGranted = false;
+  bool _isBatteryIgnored = false;
 
   bool get isUsageGranted => _isUsageGranted;
   bool get isAccessibilityEnabled => _isAccessibilityEnabled;
   bool get isOverlayGranted => _isOverlayGranted;
   bool get isNotificationGranted => _isNotificationGranted;
   bool get isDndGranted => _isDndGranted;
-  bool get allGranted => _isUsageGranted && _isAccessibilityEnabled && _isOverlayGranted && _isNotificationGranted && _isDndGranted;
+  bool get isBatteryIgnored => _isBatteryIgnored;
+  bool get allGranted => _isUsageGranted && _isAccessibilityEnabled && _isOverlayGranted && _isDndGranted && _isBatteryIgnored;
 
   PermissionViewModel({PermissionRepository? permissionRepo}) : _permissionRepo = permissionRepo ?? getIt<PermissionRepository>() {
     checkAll();
@@ -36,6 +38,7 @@ class PermissionViewModel extends BaseViewModel {
       _isOverlayGranted = await _permissionRepo.isOverlayPermissionGranted();
       _isNotificationGranted = await _permissionRepo.isNotificationPermissionGranted();
       _isDndGranted = await getIt<StudyModeService>().checkNotificationPolicyPermission();
+      _isBatteryIgnored = await _permissionRepo.isBatteryOptimizationIgnored();
       setState(ViewState.idle);
     } catch (e) {
       setError(e.toString());
@@ -63,5 +66,20 @@ class PermissionViewModel extends BaseViewModel {
   Future<void> requestDnd() async {
     await getIt<StudyModeService>().requestNotificationPolicyPermission();
     await checkAll(delayed: true);
+  }
+
+  Future<void> requestBatteryIgnore() async {
+    await _permissionRepo.requestIgnoreBatteryOptimization();
+    
+    // Poll for status since system dialog might not trigger lifecycle events
+    for (int i = 0; i < 15; i++) {
+      await Future.delayed(const Duration(seconds: 1));
+      final isIgnored = await _permissionRepo.isBatteryOptimizationIgnored();
+      if (isIgnored && !_isBatteryIgnored) {
+        await checkAll();
+        break;
+      }
+    }
+    await checkAll();
   }
 }

@@ -14,6 +14,41 @@ class UsageDataService {
   static UsageDataService get instance => _instance ??= UsageDataService._();
   UsageDataService._();
 
+  final Map<String, AppInfo> _appInfoCache = {};
+  final Set<String> _validPackages = {};
+  bool _isCacheInitialized = false;
+
+  Future<void> _ensureCache() async {
+    if (_isCacheInitialized) return;
+
+    List<AppInfo> rawInstalledApps =
+        await InstalledApps.getInstalledApps(false, true);
+    List<AppInfo> userApps =
+        await InstalledApps.getInstalledApps(true, false);
+    Set<String> userAppPackages = userApps.map((a) => a.packageName).toSet();
+
+    final allowedSystemApps = [
+      'com.google.android.youtube',
+      'com.android.chrome',
+      'com.google.android.gm',
+      'com.google.android.apps.maps',
+      'com.google.android.apps.photos',
+      'com.google.android.apps.docs',
+      'com.google.android.calculator',
+      'com.google.android.calendar',
+      'com.google.android.keep',
+    ];
+
+    for (var app in rawInstalledApps) {
+      _appInfoCache[app.packageName] = app;
+      final pkg = app.packageName.toLowerCase();
+      if (userAppPackages.contains(app.packageName) || allowedSystemApps.contains(pkg)) {
+        _validPackages.add(app.packageName);
+      }
+    }
+    _isCacheInitialized = true;
+  }
+
   Future<List<MindLockUsageInfo>> getDailyUsage({DateTime? targetDate}) async {
     try {
       DateTime now = targetDate ?? DateTime.now();
@@ -21,6 +56,7 @@ class UsageDataService {
       DateTime endDate = targetDate == null ? now : startDate.add(const Duration(days: 1));
 
       List<MindLockUsageInfo> infos = [];
+      await _ensureCache();
 
       if (Platform.isAndroid) {
         final Map<dynamic, dynamic> usageMap =
@@ -29,41 +65,14 @@ class UsageDataService {
           'end': endDate.millisecondsSinceEpoch,
         });
 
-        List<AppInfo> rawInstalledApps =
-            await InstalledApps.getInstalledApps(true, true);
-        
-        List<AppInfo> installedApps = rawInstalledApps.where((app) {
-          if (app.packageName == 'com.noorsoft.mindlock') return false;
-          final pkg = app.packageName.toLowerCase();
-          final allowedSystemApps = [
-            'com.google.android.youtube', 'com.android.chrome', 'com.google.android.gm',
-            'com.google.android.apps.maps', 'com.google.android.apps.photos', 'com.google.android.apps.docs',
-            'com.google.android.calculator', 'com.google.android.calendar', 'com.google.android.keep',
-          ];
-          if (allowedSystemApps.contains(pkg)) {
-            return true;
-          }
-          if (pkg.startsWith('com.android.') || pkg.startsWith('com.google.android.') ||
-              pkg.startsWith('com.samsung.') || pkg.startsWith('com.sec.') ||
-              pkg.startsWith('com.miui.') || pkg.startsWith('com.coloros.') ||
-              pkg.startsWith('com.oplus.') || pkg.startsWith('com.vivo.') ||
-              pkg.startsWith('com.huawei.') || pkg.startsWith('com.oneplus.') ||
-              pkg.startsWith('android')) {
-            return false;
-          }
-          return true;
-        }).toList();
-
-        Map<String, AppInfo> appInfoMap = {
-          for (var app in installedApps) app.packageName: app
-        };
-
         usageMap.forEach((key, value) {
           String packageName = key.toString();
           int durationMs = (value as num).toInt();
 
           if (durationMs > 0 && packageName != 'com.noorsoft.mindlock') {
-            final appInfo = appInfoMap[packageName];
+            if (!_validPackages.contains(packageName)) return;
+            
+            final appInfo = _appInfoCache[packageName];
             if (appInfo != null) {
               String appName = appInfo.name;
               infos.add(MindLockUsageInfo(
@@ -81,14 +90,10 @@ class UsageDataService {
         List<pkg.AppUsageInfo> usageStats =
             await pkg.AppUsage().getAppUsage(startDate, endDate);
 
-        List<AppInfo> installedApps =
-            await InstalledApps.getInstalledApps(true, false);
-        Map<String, AppInfo> appInfoMap = {
-          for (var app in installedApps) app.packageName: app
-        };
-
         for (var usage in usageStats) {
-          final appInfo = appInfoMap[usage.packageName];
+          if (!_validPackages.contains(usage.packageName)) continue;
+          
+          final appInfo = _appInfoCache[usage.packageName];
           if (appInfo == null || usage.packageName == 'com.noorsoft.mindlock') {
             continue;
           }

@@ -39,6 +39,10 @@ class PermissionService {
     return await Permission.notification.isGranted;
   }
 
+  Future<bool> isBatteryOptimizationIgnored() async {
+    return await Permission.ignoreBatteryOptimizations.isGranted;
+  }
+
   Future<void> openUsageAccessSettings() async {
     await _channel.invokeMethod('openUsageAccessSettings');
   }
@@ -61,5 +65,9 @@ class PermissionService {
 
   Future<void> requestNotificationPermission() async {
     await Permission.notification.request();
+  }
+
+  Future<void> requestIgnoreBatteryOptimization() async {
+    await Permission.ignoreBatteryOptimizations.request();
   }
 }

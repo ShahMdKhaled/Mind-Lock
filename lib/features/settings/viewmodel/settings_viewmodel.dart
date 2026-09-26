@@ -5,6 +5,7 @@ import '../../../core/di/service_locator.dart';
 
 import '../../../data/repositories/permission_repository.dart';
 import '../../../data/services/study_mode_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class SettingsViewModel extends ChangeNotifier {
   final SettingsRepository _settingsRepo;
@@ -129,18 +130,36 @@ class SettingsViewModel extends ChangeNotifier {
   }
 
   Future<void> toggleScrollLimit(bool enabled) async {
+    if (enabled) {
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
+    }
     _settings = _settings.copyWith(scrollLimitEnabled: enabled);
     await _settingsRepo.setScrollLimitEnabled(enabled);
     notifyListeners();
   }
 
   Future<void> toggleBreakEnabled(bool enabled) async {
+    if (enabled) {
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
+    }
     _settings = _settings.copyWith(breakEnabled: enabled);
     await _settingsRepo.setBreakEnabled(enabled);
     notifyListeners();
   }
 
   Future<void> toggleDailyLimit(bool enabled) async {
+    if (enabled) {
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
+    }
     _settings = _settings.copyWith(dailyLimitEnabled: enabled);
     await _settingsRepo.setDailyLimitEnabled(enabled);
     notifyListeners();
@@ -156,6 +175,11 @@ class SettingsViewModel extends ChangeNotifier {
     if (!enabled) {
       final allowed = await requestDisableFeature('strict_mode');
       if (!allowed) return;
+    } else {
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
     }
     _settings = _settings.copyWith(strictModeEnabled: enabled);
     await _settingsRepo.setStrictModeEnabled(enabled);

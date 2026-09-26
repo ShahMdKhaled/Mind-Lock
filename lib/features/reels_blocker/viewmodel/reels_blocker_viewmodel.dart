@@ -5,6 +5,7 @@ import '../../../data/repositories/settings_repository.dart';
 import '../../../data/repositories/permission_repository.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/constants.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ReelsBlockerViewModel extends ChangeNotifier {
   final SettingsRepository _settingsRepo;
@@ -82,6 +83,11 @@ class ReelsBlockerViewModel extends ChangeNotifier {
     if (!enabled) {
       final allowed = await requestDisableFeature('reels_blocker');
       if (!allowed) return;
+    } else {
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
     }
     _settings = _settings.copyWith(reelsBlockerEnabled: enabled);
     await _settingsRepo.setReelsBlockerEnabled(enabled);

@@ -4,6 +4,8 @@ import 'package:installed_apps/app_info.dart';
 import '../../../data/models/app_settings.dart';
 import '../../../data/repositories/settings_repository.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../data/services/usage_data_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class AppLimitsViewModel extends ChangeNotifier {
   final SettingsRepository _settingsRepo;
@@ -27,14 +29,38 @@ class AppLimitsViewModel extends ChangeNotifier {
     loadInstalledApps();
   }
 
+  final Map<String, AppInfo> _limitedAppsCache = {};
+
   Future<void> loadSettings() async {
     _isLoading = true;
     notifyListeners();
 
     _settings = await _settingsRepo.loadSettings();
 
+    // Cache limited apps for instant display
+    final futures = _settings.appLimits.keys.map((pkg) async {
+       try {
+         final info = await InstalledApps.getAppInfo(pkg, null);
+         if (info != null) {
+           _limitedAppsCache[pkg] = info;
+         }
+       } catch (_) {}
+    });
+    await Future.wait(futures);
+
     _isLoading = false;
     notifyListeners();
+  }
+
+  AppInfo? getCachedAppInfo(String packageName) {
+    if (_limitedAppsCache.containsKey(packageName)) {
+      return _limitedAppsCache[packageName];
+    }
+    try {
+      return _installedApps.firstWhere((app) => app.packageName == packageName);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> loadInstalledApps() async {
@@ -42,11 +68,21 @@ class AppLimitsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final apps = await InstalledApps.getInstalledApps(true, true);
-      _installedApps = apps.where((app) {
+      final allApps = await InstalledApps.getInstalledApps(false, true);
+      final userAppsRaw = await InstalledApps.getInstalledApps(true, false);
+      final userAppPackages = userAppsRaw.map((a) => a.packageName).toSet();
+
+      final usageInfos = await UsageDataService.instance.getDailyUsage();
+      final usageMap = {
+        for (var info in usageInfos) info.packageName: info.usage.inMilliseconds
+      };
+
+      _installedApps = allApps.where((app) {
         if (app.packageName == 'com.noorsoft.mindlock') return false;
-        
+
         final pkg = app.packageName.toLowerCase();
+        final isUserApp = userAppPackages.contains(app.packageName);
+        final hasUsage = (usageMap[app.packageName] ?? 0) > 0;
 
         // Allowed list of Google/Android apps that users typically want to limit
         final allowedSystemApps = [
@@ -61,28 +97,29 @@ class AppLimitsViewModel extends ChangeNotifier {
           'com.google.android.keep',
         ];
 
-        if (allowedSystemApps.contains(pkg)) {
+        if (isUserApp) return true;
+        if (allowedSystemApps.contains(pkg)) return true;
+
+        if (hasUsage) {
+          if (pkg == 'android' ||
+              pkg == 'com.android.systemui' ||
+              pkg.contains('launcher')) {
+            return false;
+          }
           return true;
         }
 
-        // Manually filter out common system/manufacturer packages that might bypass the plugin's FLAG_SYSTEM check
-        if (pkg.startsWith('com.android.') ||
-            pkg.startsWith('com.google.android.') ||
-            pkg.startsWith('com.samsung.') ||
-            pkg.startsWith('com.sec.') ||
-            pkg.startsWith('com.miui.') ||
-            pkg.startsWith('com.coloros.') ||
-            pkg.startsWith('com.oplus.') ||
-            pkg.startsWith('com.vivo.') ||
-            pkg.startsWith('com.huawei.') ||
-            pkg.startsWith('com.oneplus.') ||
-            pkg.startsWith('android')) {
-          return false;
-        }
-        return true;
+        return false;
       }).toList();
-      _installedApps
-          .sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+      _installedApps.sort((a, b) {
+        final usageA = usageMap[a.packageName] ?? 0;
+        final usageB = usageMap[b.packageName] ?? 0;
+        if (usageA != usageB) {
+          return usageB.compareTo(usageA);
+        }
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
     } catch (e) {
       if (kDebugMode) {
         print("Error loading installed apps: $e");
@@ -109,7 +146,8 @@ class AppLimitsViewModel extends ChangeNotifier {
   Future<bool> requestDisableFeature(String feature) async {
     if (!_settings.strictModeEnabled) return true;
 
-    if (_settings.targetFeatureToDisable == feature && !_settings.isStrictModeDelayActive) {
+    if (_settings.targetFeatureToDisable == feature &&
+        !_settings.isStrictModeDelayActive) {
       _settings = _settings.copyWith(
         clearStrictModeState: true,
       );
@@ -134,8 +172,13 @@ class AppLimitsViewModel extends ChangeNotifier {
 
   Future<void> toggleMasterShield(bool enabled) async {
     if (!enabled) {
-      final allowed = await requestDisableFeature('app_limits_master');
+      final allowed = await requestDisableFeature('app_limits');
       if (!allowed) return;
+    } else {
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
     }
     _settings = _settings.copyWith(appLimitsEnabled: enabled);
     await _settingsRepo.setAppLimitsEnabled(enabled);
