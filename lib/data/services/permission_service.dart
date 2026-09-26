@@ -2,11 +2,13 @@ import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class PermissionService {
-  static const MethodChannel _channel = MethodChannel('com.noorsoft.mindlock/permissions');
+  static const MethodChannel _channel =
+      MethodChannel('com.noorsoft.mindlock/permissions');
 
   Future<bool> isUsageAccessGranted() async {
     try {
-      final bool? result = await _channel.invokeMethod<bool>('isUsageAccessGranted');
+      final bool? result =
+          await _channel.invokeMethod<bool>('isUsageAccessGranted');
       return result ?? false;
     } catch (e) {
       return false;
@@ -15,7 +17,18 @@ class PermissionService {
 
   Future<bool> isAccessibilityServiceEnabled() async {
     try {
-      final bool? result = await _channel.invokeMethod<bool>('isAccessibilityServiceEnabled');
+      final bool? result =
+          await _channel.invokeMethod<bool>('isAccessibilityServiceEnabled');
+      return result ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> isDeviceAdminEnabled() async {
+    try {
+      final bool? result =
+          await _channel.invokeMethod<bool>('isDeviceAdminEnabled');
       return result ?? false;
     } catch (e) {
       return false;
@@ -28,7 +41,8 @@ class PermissionService {
 
   Future<bool> isNotificationPolicyAccessGranted() async {
     try {
-      final bool? result = await _channel.invokeMethod<bool>('isNotificationPolicyAccessGranted');
+      final bool? result = await _channel
+          .invokeMethod<bool>('isNotificationPolicyAccessGranted');
       return result ?? false;
     } catch (e) {
       return false;
@@ -57,6 +71,10 @@ class PermissionService {
     } catch (e) {
       await Permission.systemAlertWindow.request();
     }
+  }
+
+  Future<void> requestDeviceAdmin() async {
+    await _channel.invokeMethod('requestDeviceAdmin');
   }
 
   Future<void> openNotificationPolicySettings() async {

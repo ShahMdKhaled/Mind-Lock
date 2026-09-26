@@ -52,8 +52,10 @@ class HomeViewModel extends BaseViewModel {
     final usage = await _permissionRepo.isUsageAccessGranted();
     final accessibility = await _permissionRepo.isAccessibilityServiceEnabled();
     final overlay = await _permissionRepo.isOverlayPermissionGranted();
-    final notification = await _permissionRepo.isNotificationPermissionGranted();
-    final dnd = await getIt<StudyModeService>().checkNotificationPolicyPermission();
+    final notification =
+        await _permissionRepo.isNotificationPermissionGranted();
+    final dnd =
+        await getIt<StudyModeService>().checkNotificationPolicyPermission();
     return usage && accessibility && overlay && notification && dnd;
   }
 
@@ -65,15 +67,16 @@ class HomeViewModel extends BaseViewModel {
     _summary = await _usageRepo.getUsageSummary();
     final now = DateTime.now();
     _yesterdaySummary = await _usageRepo.getUsageSummary(
-      targetDate: DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1))
-    );
+        targetDate: DateTime(now.year, now.month, now.day)
+            .subtract(const Duration(days: 1)));
     notifyListeners();
   }
 
   Future<bool> requestDisableFeature(String feature) async {
     if (!_settings.strictModeEnabled) return true;
 
-    if (_settings.targetFeatureToDisable == feature && !_settings.isStrictModeDelayActive) {
+    if (_settings.targetFeatureToDisable == feature &&
+        !_settings.isStrictModeDelayActive) {
       _settings = _settings.copyWith(
         clearStrictModeState: true,
       );
@@ -133,9 +136,12 @@ class HomeViewModel extends BaseViewModel {
   }
 
   int get totalScreenMinutes => _summary?.totalScreen.inMinutes ?? 0;
-  int get yesterdayScreenMinutes => _yesterdaySummary?.totalScreen.inMinutes ?? 0;
-  
+  int get yesterdayScreenMinutes =>
+      _yesterdaySummary?.totalScreen.inMinutes ?? 0;
+
   int get socialMediaMinutes => _summary?.totalSocialMedia.inMinutes ?? 0;
+  int get dailyBreaksCount => _settingsRepo.getDailyBreaksCount();
+
   String get formattedScreenTime {
     final mins = totalScreenMinutes;
     return '${mins ~/ 60}h ${mins % 60}m';
@@ -143,14 +149,16 @@ class HomeViewModel extends BaseViewModel {
 
   String get screenTimeChangeText {
     if (_yesterdaySummary == null || _summary == null) return 'Calculating...';
-    
+
     if (yesterdayScreenMinutes == 0) {
       if (totalScreenMinutes == 0) return 'Same as yesterday';
       return '+100% from yesterday';
     }
-    
-    final double change = ((totalScreenMinutes - yesterdayScreenMinutes) / yesterdayScreenMinutes) * 100;
-    
+
+    final double change = ((totalScreenMinutes - yesterdayScreenMinutes) /
+            yesterdayScreenMinutes) *
+        100;
+
     if (change > 0) {
       return '+${change.toStringAsFixed(0)}% from yesterday';
     } else if (change < 0) {

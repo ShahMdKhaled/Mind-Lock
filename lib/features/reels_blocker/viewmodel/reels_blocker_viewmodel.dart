@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
-import 'package:installed_apps/installed_apps.dart';
 import '../../../data/models/app_settings.dart';
 import '../../../data/repositories/settings_repository.dart';
 import '../../../data/repositories/permission_repository.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/constants.dart';
+import '../../../data/services/app_cache_service.dart' as import_app_cache;
 import 'package:permission_handler/permission_handler.dart';
 
 class ReelsBlockerViewModel extends ChangeNotifier {
@@ -21,7 +21,8 @@ class ReelsBlockerViewModel extends ChangeNotifier {
   List<String> get blockedPackages => _settings.reelsBlockedPackages;
   Map<String, Uint8List> get appIcons => _appIcons;
 
-  ReelsBlockerViewModel({SettingsRepository? settingsRepo, PermissionRepository? permissionRepo}) 
+  ReelsBlockerViewModel(
+      {SettingsRepository? settingsRepo, PermissionRepository? permissionRepo})
       : _settingsRepo = settingsRepo ?? getIt<SettingsRepository>(),
         _permissionRepo = permissionRepo ?? getIt<PermissionRepository>() {
     loadSettings();
@@ -39,10 +40,11 @@ class ReelsBlockerViewModel extends ChangeNotifier {
     notifyListeners();
 
     _settings = await _settingsRepo.loadSettings();
-    
+
     for (String pkg in AppConstants.reelsPackages) {
       try {
-        final info = await InstalledApps.getAppInfo(pkg, null);
+        final info =
+            await import_app_cache.AppCacheService.instance.getAppInfo(pkg);
         if (info != null && info.icon != null) {
           _appIcons[pkg] = info.icon!;
         }
@@ -56,7 +58,8 @@ class ReelsBlockerViewModel extends ChangeNotifier {
   Future<bool> requestDisableFeature(String feature) async {
     if (!_settings.strictModeEnabled) return true;
 
-    if (_settings.targetFeatureToDisable == feature && !_settings.isStrictModeDelayActive) {
+    if (_settings.targetFeatureToDisable == feature &&
+        !_settings.isStrictModeDelayActive) {
       _settings = _settings.copyWith(
         clearStrictModeState: true,
       );

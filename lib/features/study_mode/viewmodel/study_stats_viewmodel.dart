@@ -14,7 +14,7 @@ class StudyStatsViewModel extends BaseViewModel {
   int get todayMinutes => _todayMinutes;
   int get yesterdayMinutes => _yesterdayMinutes;
 
-  StudyStatsViewModel({StudyStatsRepository? repository}) 
+  StudyStatsViewModel({StudyStatsRepository? repository})
       : _repository = repository ?? getIt<StudyStatsRepository>();
 
   Future<void> loadStats() async {

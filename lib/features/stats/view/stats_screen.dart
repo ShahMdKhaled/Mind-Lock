@@ -41,7 +41,8 @@ class _StatsScreenState extends State<StatsScreen> {
               children: [
                 _buildChartCard(vm),
                 const SizedBox(height: 24),
-                Text('Most Used Apps', style: Theme.of(context).textTheme.headlineSmall),
+                Text('Most Used Apps',
+                    style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 16),
                 if (summary != null)
                   ...vm.topApps.map((usage) => _buildAppUsageItem(usage))
@@ -57,15 +58,15 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Widget _buildChartCard(StatsViewModel vm) {
     final weeklyData = vm.weeklyData;
-    
+
     double maxHours = 2.0;
     List<BarChartGroupData> barGroups = [];
-    
+
     if (weeklyData.isNotEmpty) {
       for (int i = 0; i < weeklyData.length; i++) {
         final hours = weeklyData[i].totalScreen.inMinutes / 60.0;
         if (hours > maxHours) maxHours = hours;
-        
+
         final color = (hours > 6) ? AppColors.danger : AppColors.primary;
         barGroups.add(_makeGroupData(i, hours, color, maxHours));
       }
@@ -75,7 +76,7 @@ class _StatsScreenState extends State<StatsScreen> {
         barGroups.add(_makeGroupData(i, 0, AppColors.primary, 2.0));
       }
     }
-    
+
     // Add some padding to maxY
     maxHours = maxHours * 1.2;
 
@@ -89,7 +90,8 @@ class _StatsScreenState extends State<StatsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Weekly Overview (Hours)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const Text('Weekly Overview (Hours)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
           const SizedBox(height: 24),
           SizedBox(
             height: 200,
@@ -106,7 +108,8 @@ class _StatsScreenState extends State<StatsScreen> {
                       final mins = ((rod.toY - hours) * 60).round();
                       return BarTooltipItem(
                         '${hours}h ${mins}m',
-                        const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold),
                       );
                     },
                   ),
@@ -120,13 +123,17 @@ class _StatsScreenState extends State<StatsScreen> {
                         if (weeklyData.isEmpty) return const Text('');
                         final date = weeklyData[value.toInt()].date;
                         const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                        return Text(days[date.weekday - 1], style: const TextStyle(color: AppColors.textMuted));
+                        return Text(days[date.weekday - 1],
+                            style: const TextStyle(color: AppColors.textMuted));
                       },
                     ),
                   ),
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
                 ),
                 gridData: const FlGridData(show: false),
                 borderData: FlBorderData(show: false),
@@ -148,14 +155,18 @@ class _StatsScreenState extends State<StatsScreen> {
           color: color,
           width: 12,
           borderRadius: BorderRadius.circular(4),
-          backDrawRodData: BackgroundBarChartRodData(show: true, toY: maxY == 0 ? 10 : maxY, color: AppColors.surfaceVariant),
+          backDrawRodData: BackgroundBarChartRodData(
+              show: true,
+              toY: maxY == 0 ? 10 : maxY,
+              color: AppColors.surfaceVariant),
         ),
       ],
     );
   }
 
   Widget _buildAppUsageItem(dynamic usage) {
-    final bool isSocial = AppConstants.socialMediaApps.containsKey(usage.packageName);
+    final bool isSocial =
+        AppConstants.socialMediaApps.containsKey(usage.packageName);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -163,7 +174,10 @@ class _StatsScreenState extends State<StatsScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isSocial ? AppColors.danger.withValues(alpha: 0.3) : AppColors.cardBorder),
+        border: Border.all(
+            color: isSocial
+                ? AppColors.danger.withValues(alpha: 0.3)
+                : AppColors.cardBorder),
       ),
       child: Row(
         children: [
@@ -177,23 +191,36 @@ class _StatsScreenState extends State<StatsScreen> {
             clipBehavior: Clip.antiAlias,
             child: usage.icon != null
                 ? Image.memory(usage.icon, fit: BoxFit.cover)
-                : Center(child: Text(usage.appName[0], style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold))),
+                : Center(
+                    child: Text(usage.appName[0],
+                        style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold))),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(usage.appName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                if (isSocial) const Text('Social Media', style: TextStyle(color: AppColors.danger, fontSize: 10, fontWeight: FontWeight.bold)),
+                Text(usage.appName,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                if (isSocial)
+                  const Text('Social Media',
+                      style: TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold)),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(usage.formattedUsage, style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text('${((usage.usage.inMinutes / 1440) * 100).toStringAsFixed(1)}%', style: Theme.of(context).textTheme.bodySmall),
+              Text(usage.formattedUsage,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                  '${((usage.usage.inMinutes / 1440) * 100).toStringAsFixed(1)}%',
+                  style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ],

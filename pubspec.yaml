@@ -46,6 +46,7 @@ dependencies:
   wakelock_plus: ^1.2.10
   url_launcher: ^6.3.2
   package_info_plus: ^10.2.1
+  app_settings: ^9.0.0
 
 dev_dependencies:
   flutter_test:

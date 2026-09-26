@@ -3,9 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:app_usage/app_usage.dart' as pkg;
 import '../models/app_usage_info.dart';
 import '../../core/constants.dart';
-
-import 'package:installed_apps/installed_apps.dart';
-import 'package:installed_apps/app_info.dart';
+import 'app_cache_service.dart';
+import 'package:installed_apps/installed_apps.dart' as import_installed_apps;
 
 class UsageDataService {
   static const MethodChannel _channel =
@@ -14,20 +13,21 @@ class UsageDataService {
   static UsageDataService get instance => _instance ??= UsageDataService._();
   UsageDataService._();
 
-  final Map<String, AppInfo> _appInfoCache = {};
-  final Set<String> _validPackages = {};
-  bool _isCacheInitialized = false;
+  static Set<String>? _validPackagesCache;
 
-  Future<void> _ensureCache() async {
-    if (_isCacheInitialized) return;
+  Future<Set<String>> _getValidPackages() async {
+    if (_validPackagesCache != null) return _validPackagesCache!;
 
-    List<AppInfo> rawInstalledApps =
-        await InstalledApps.getInstalledApps(false, true);
-    List<AppInfo> userApps =
-        await InstalledApps.getInstalledApps(true, false);
-    Set<String> userAppPackages = userApps.map((a) => a.packageName).toSet();
+    try {
+      final userApps =
+          await import_installed_apps.InstalledApps.getInstalledApps(
+              true, false);
+      _validPackagesCache = userApps.map((a) => a.packageName).toSet();
+    } catch (_) {
+      _validPackagesCache = {};
+    }
 
-    final allowedSystemApps = [
+    final allowedSystemApps = {
       'com.google.android.youtube',
       'com.android.chrome',
       'com.google.android.gm',
@@ -37,26 +37,21 @@ class UsageDataService {
       'com.google.android.calculator',
       'com.google.android.calendar',
       'com.google.android.keep',
-    ];
+    };
 
-    for (var app in rawInstalledApps) {
-      _appInfoCache[app.packageName] = app;
-      final pkg = app.packageName.toLowerCase();
-      if (userAppPackages.contains(app.packageName) || allowedSystemApps.contains(pkg)) {
-        _validPackages.add(app.packageName);
-      }
-    }
-    _isCacheInitialized = true;
+    _validPackagesCache!.addAll(allowedSystemApps);
+    return _validPackagesCache!;
   }
 
   Future<List<MindLockUsageInfo>> getDailyUsage({DateTime? targetDate}) async {
     try {
       DateTime now = targetDate ?? DateTime.now();
       DateTime startDate = DateTime(now.year, now.month, now.day);
-      DateTime endDate = targetDate == null ? now : startDate.add(const Duration(days: 1));
+      DateTime endDate =
+          targetDate == null ? now : startDate.add(const Duration(days: 1));
 
       List<MindLockUsageInfo> infos = [];
-      await _ensureCache();
+      final validPackages = await _getValidPackages();
 
       if (Platform.isAndroid) {
         final Map<dynamic, dynamic> usageMap =
@@ -65,44 +60,44 @@ class UsageDataService {
           'end': endDate.millisecondsSinceEpoch,
         });
 
-        usageMap.forEach((key, value) {
-          String packageName = key.toString();
-          int durationMs = (value as num).toInt();
+        for (var entry in usageMap.entries) {
+          String packageName = entry.key.toString();
+          int durationMs = (entry.value as num).toInt();
 
           if (durationMs > 0 && packageName != 'com.noorsoft.mindlock') {
-            if (!_validPackages.contains(packageName)) return;
-            
-            final appInfo = _appInfoCache[packageName];
+            if (!validPackages.contains(packageName)) continue;
+
+            final appInfo =
+                await AppCacheService.instance.getAppInfo(packageName);
             if (appInfo != null) {
-              String appName = appInfo.name;
               infos.add(MindLockUsageInfo(
                 packageName: packageName,
-                appName: appName,
+                appName: appInfo.name,
                 usage: Duration(milliseconds: durationMs),
                 date: startDate,
                 icon: appInfo.icon,
               ));
             }
           }
-        });
+        }
       } else {
         // Fallback or iOS logic if ever needed
         List<pkg.AppUsageInfo> usageStats =
             await pkg.AppUsage().getAppUsage(startDate, endDate);
 
         for (var usage in usageStats) {
-          if (!_validPackages.contains(usage.packageName)) continue;
-          
-          final appInfo = _appInfoCache[usage.packageName];
-          if (appInfo == null || usage.packageName == 'com.noorsoft.mindlock') {
+          if (usage.packageName == 'com.noorsoft.mindlock') {
             continue;
           }
+          if (!validPackages.contains(usage.packageName)) continue;
 
-          String appName = appInfo.name;
+          final appInfo =
+              await AppCacheService.instance.getAppInfo(usage.packageName);
+          if (appInfo == null) continue;
 
           infos.add(MindLockUsageInfo(
             packageName: usage.packageName,
-            appName: appName,
+            appName: appInfo.name,
             usage: usage.usage,
             date: startDate,
             icon: appInfo.icon,

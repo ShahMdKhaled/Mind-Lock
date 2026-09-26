@@ -38,7 +38,11 @@ class _StudyReportScreenContent extends StatelessWidget {
                   children: [
                     _buildSummaryCards(vm),
                     const SizedBox(height: 30),
-                    const Text('Last 30 Days', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const Text('Last 30 Days',
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
                     const SizedBox(height: 20),
                     _buildChart(vm),
                     const SizedBox(height: 30),
@@ -58,7 +62,8 @@ class _StudyReportScreenContent extends StatelessWidget {
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: _buildCard('Yesterday', '${vm.yesterdayMinutes}m', AppColors.surfaceVariant),
+          child: _buildCard(
+              'Yesterday', '${vm.yesterdayMinutes}m', AppColors.surfaceVariant),
         ),
       ],
     );
@@ -74,9 +79,14 @@ class _StudyReportScreenContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: AppColors.textMuted, fontSize: 14)),
+          Text(title,
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 14)),
           const SizedBox(height: 8),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -84,15 +94,17 @@ class _StudyReportScreenContent extends StatelessWidget {
 
   Widget _buildChart(StudyStatsViewModel vm) {
     if (vm.dailyStats.isEmpty) {
-      return const Center(child: Text('No data yet', style: TextStyle(color: AppColors.textMuted)));
+      return const Center(
+          child: Text('No data yet',
+              style: TextStyle(color: AppColors.textMuted)));
     }
 
     final sortedEntries = vm.dailyStats.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
-      
+
     final List<BarChartGroupData> barGroups = [];
     double maxVal = 0;
-    
+
     for (int i = 0; i < sortedEntries.length; i++) {
       final val = sortedEntries[i].value.toDouble();
       if (val > maxVal) maxVal = val;
@@ -130,11 +142,11 @@ class _StudyReportScreenContent extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildHistoryList(StudyStatsViewModel vm) {
     final sortedEntries = vm.dailyStats.entries.toList()
       ..sort((a, b) => b.key.compareTo(a.key));
-      
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -144,7 +156,9 @@ class _StudyReportScreenContent extends StatelessWidget {
         return ListTile(
           contentPadding: EdgeInsets.zero,
           title: Text(entry.key, style: const TextStyle(color: Colors.white)),
-          trailing: Text('${entry.value} mins', style: const TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold)),
+          trailing: Text('${entry.value} mins',
+              style: const TextStyle(
+                  color: AppColors.secondary, fontWeight: FontWeight.bold)),
         );
       },
     );

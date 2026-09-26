@@ -16,7 +16,6 @@ import '../../settings/view/app_time_breaks_screen.dart';
 
 import '../../settings/view/daily_scroll_limit_screen.dart';
 
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -171,8 +170,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             children: [
               _buildUsageStatItem(
                   'Social Media', '${socialMins}m', Icons.share),
-              _buildUsageStatItem('Study Mode', '${context.watch<StudyStatsViewModel>().todayMinutes}m', Icons.menu_book),
-              _buildUsageStatItem('Breaks', '4', Icons.coffee),
+              _buildUsageStatItem(
+                  'Study Mode',
+                  '${context.watch<StudyStatsViewModel>().todayMinutes}m',
+                  Icons.menu_book),
+              _buildUsageStatItem(
+                  'Breaks', '${vm.dailyBreaksCount}', Icons.coffee),
             ],
           ),
         ],
@@ -218,11 +221,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     Icons.block)),
             const SizedBox(width: 16),
             Expanded(
-                child: _buildToggleCard(
-                    'Study Mode',
-                    studyVm.isActive,
-                    AppColors.secondary,
-                    Icons.school)),
+                child: _buildToggleCard('Study Mode', studyVm.isActive,
+                    AppColors.secondary, Icons.school)),
           ],
         ),
         const SizedBox(height: 16),
@@ -249,19 +249,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         Row(
           children: [
             Expanded(
-              child: _buildToggleCard(
-                  'Strict Mode',
-                  settings.strictModeEnabled,
-                  AppColors.warning,
-                  Icons.lock_clock),
+              child: _buildToggleCard('Strict Mode', settings.strictModeEnabled,
+                  AppColors.warning, Icons.lock_clock),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _buildToggleCard(
-                  'App Time Breaks',
-                  settings.breakEnabled,
-                  AppColors.primary,
-                  Icons.coffee),
+              child: _buildToggleCard('App Time Breaks', settings.breakEnabled,
+                  AppColors.primary, Icons.coffee),
             ),
           ],
         ),
@@ -269,7 +263,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildToggleCard(String title, bool value, Color accent, IconData icon) {
+  Widget _buildToggleCard(
+      String title, bool value, Color accent, IconData icon) {
     return GestureDetector(
       onTap: () async {
         if (title == 'Reels Blocker') {
@@ -278,15 +273,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               MaterialPageRoute(
                   builder: (context) => const ReelsBlockerScreen()));
         } else if (title == 'Study Mode') {
-          await Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const StudyModeScreen()));
+          await Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const StudyModeScreen()));
         } else if (title == 'App Use Limit') {
-          await Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const AppLimitsScreen()));
+          await Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const AppLimitsScreen()));
         } else if (title == 'Uninstall Protect') {
           await Navigator.push(
               context,
@@ -303,7 +294,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               MaterialPageRoute(
                   builder: (context) => const AppTimeBreaksScreen()));
         }
-        
+
         if (mounted) {
           context.read<SettingsViewModel>().loadSettings();
         }
@@ -330,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 12),
             Text(
-              title, 
+              title,
               style: Theme.of(context).textTheme.titleLarge,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -357,13 +348,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         const SizedBox(height: 16),
         _buildFeatureItem(
           'Daily Scroll Limit',
-          settings.scrollLimitEnabled ? '${settings.scrollLimitMinutes}m limit set for today' : 'Not enabled',
+          settings.scrollLimitEnabled
+              ? '${settings.scrollLimitMinutes}m limit set for today'
+              : 'Not enabled',
           Icons.hourglass_bottom,
           AppColors.warning,
           () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const DailyScrollLimitScreen()),
+              MaterialPageRoute(
+                  builder: (context) => const DailyScrollLimitScreen()),
             );
           },
         ),
@@ -371,8 +365,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildFeatureItem(
-      String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildFeatureItem(String title, String subtitle, IconData icon,
+      Color color, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -421,7 +415,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       decoration: BoxDecoration(
         color: AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(AppConstants.cardRadius),
-        border: Border.all(color: AppColors.warning.withValues(alpha: 0.6), width: 1.5),
+        border: Border.all(
+            color: AppColors.warning.withValues(alpha: 0.6), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: AppColors.warning.withValues(alpha: 0.15),
@@ -438,7 +433,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               color: AppColors.warning.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.warning_rounded, color: AppColors.warning, size: 24),
+            child: const Icon(Icons.warning_rounded,
+                color: AppColors.warning, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -446,7 +442,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text('Permissions Required',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppColors.textPrimary)),
                 SizedBox(height: 2),
                 Text('App features are currently limited',
                     style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
@@ -463,9 +462,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               foregroundColor: Colors.black,
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('FIX NOW', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            child: const Text('FIX NOW',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           ),
         ],
       ),

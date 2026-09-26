@@ -19,6 +19,8 @@ class SettingsViewModel extends ChangeNotifier {
   bool _isOverlayGranted = false;
   bool _isNotificationGranted = false;
   bool _isDndGranted = false;
+  bool _isBatteryIgnored = false;
+  bool _isDeviceAdminEnabled = false;
 
   AppSettings get settings => _settings;
   bool get isLoading => _isLoading;
@@ -28,8 +30,11 @@ class SettingsViewModel extends ChangeNotifier {
   bool get isOverlayGranted => _isOverlayGranted;
   bool get isNotificationGranted => _isNotificationGranted;
   bool get isDndGranted => _isDndGranted;
+  bool get isBatteryIgnored => _isBatteryIgnored;
+  bool get isDeviceAdminEnabled => _isDeviceAdminEnabled;
 
-  SettingsViewModel({SettingsRepository? settingsRepo, PermissionRepository? permissionRepo})
+  SettingsViewModel(
+      {SettingsRepository? settingsRepo, PermissionRepository? permissionRepo})
       : _settingsRepo = settingsRepo ?? getIt<SettingsRepository>(),
         _permissionRepo = permissionRepo ?? getIt<PermissionRepository>() {
     loadSettings();
@@ -48,10 +53,15 @@ class SettingsViewModel extends ChangeNotifier {
 
   Future<void> checkPermissions() async {
     _isUsageGranted = await _permissionRepo.isUsageAccessGranted();
-    _isAccessibilityEnabled = await _permissionRepo.isAccessibilityServiceEnabled();
+    _isAccessibilityEnabled =
+        await _permissionRepo.isAccessibilityServiceEnabled();
     _isOverlayGranted = await _permissionRepo.isOverlayPermissionGranted();
-    _isNotificationGranted = await _permissionRepo.isNotificationPermissionGranted();
-    _isDndGranted = await getIt<StudyModeService>().checkNotificationPolicyPermission();
+    _isNotificationGranted =
+        await _permissionRepo.isNotificationPermissionGranted();
+    _isDndGranted =
+        await getIt<StudyModeService>().checkNotificationPolicyPermission();
+    _isBatteryIgnored = await _permissionRepo.isBatteryOptimizationIgnored();
+    _isDeviceAdminEnabled = await _permissionRepo.isDeviceAdminEnabled();
     notifyListeners();
   }
 
@@ -78,10 +88,32 @@ class SettingsViewModel extends ChangeNotifier {
     await checkPermissions();
   }
 
+  Future<void> requestBatteryIgnore() async {
+    await _permissionRepo.requestIgnoreBatteryOptimization();
+    // Poll for status since system dialog might not trigger lifecycle events
+    for (int i = 0; i < 15; i++) {
+      await Future.delayed(const Duration(seconds: 1));
+      final isIgnored = await _permissionRepo.isBatteryOptimizationIgnored();
+      if (isIgnored && !_isBatteryIgnored) {
+        await checkPermissions();
+        break;
+      }
+    }
+    await checkPermissions();
+  }
+
+  Future<void> requestDeviceAdmin() async {
+    await _permissionRepo.requestDeviceAdmin();
+    // Use a delay to check later since standard lifecycle methods might not catch it perfectly.
+    await Future.delayed(const Duration(seconds: 2));
+    await checkPermissions();
+  }
+
   Future<bool> requestDisableFeature(String feature) async {
     if (!_settings.strictModeEnabled) return true;
 
-    if (_settings.targetFeatureToDisable == feature && !_settings.isStrictModeDelayActive) {
+    if (_settings.targetFeatureToDisable == feature &&
+        !_settings.isStrictModeDelayActive) {
       _settings = _settings.copyWith(
         clearStrictModeState: true,
       );
@@ -206,12 +238,13 @@ class SettingsViewModel extends ChangeNotifier {
 
   Future<void> saveStrictModeDelay() async {
     if (isStrictModeDelayLocked()) return;
-    
+
     // Lock for 15 days
     final lockedUntil = DateTime.now().add(const Duration(days: 15));
     _settings = _settings.copyWith(strictModeDelayLockedUntil: lockedUntil);
-    
-    await _settingsRepo.setStrictModeDelayMinutes(_settings.strictModeDelayMinutes);
+
+    await _settingsRepo
+        .setStrictModeDelayMinutes(_settings.strictModeDelayMinutes);
     await _settingsRepo.setStrictModeDelayLockedUntil(lockedUntil);
     notifyListeners();
   }

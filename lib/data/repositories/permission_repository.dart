@@ -3,7 +3,8 @@ import '../services/permission_service.dart';
 class PermissionRepository {
   final PermissionService _permissionService;
 
-  PermissionRepository({required PermissionService permissionService}) : _permissionService = permissionService;
+  PermissionRepository({required PermissionService permissionService})
+      : _permissionService = permissionService;
 
   Future<bool> isUsageAccessGranted() async {
     return await _permissionService.isUsageAccessGranted();
@@ -11,6 +12,10 @@ class PermissionRepository {
 
   Future<bool> isAccessibilityServiceEnabled() async {
     return await _permissionService.isAccessibilityServiceEnabled();
+  }
+
+  Future<bool> isDeviceAdminEnabled() async {
+    return await _permissionService.isDeviceAdminEnabled();
   }
 
   Future<bool> isOverlayPermissionGranted() async {
@@ -35,6 +40,10 @@ class PermissionRepository {
 
   Future<void> requestOverlayPermission() async {
     await _permissionService.requestOverlayPermission();
+  }
+
+  Future<void> requestDeviceAdmin() async {
+    await _permissionService.requestDeviceAdmin();
   }
 
   Future<void> requestNotificationPermission() async {

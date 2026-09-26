@@ -8,6 +8,7 @@ import '../../permissions/view/permission_screen.dart';
 import '../viewmodel/settings_viewmodel.dart';
 import '../../reels_blocker/view/reels_blocker_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:app_settings/app_settings.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -59,8 +60,11 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   bool _checkPermissions(SettingsViewModel vm) {
-    if (!vm.isAccessibilityEnabled || !vm.isOverlayGranted || !vm.isUsageGranted) {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const PermissionScreen()));
+    if (!vm.isAccessibilityEnabled ||
+        !vm.isOverlayGranted ||
+        !vm.isUsageGranted) {
+      Navigator.push(context,
+          MaterialPageRoute(builder: (context) => const PermissionScreen()));
       return false;
     }
     return true;
@@ -99,7 +103,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   if (settings.isUninstallProtectionActive) {
                     final remaining = settings.uninstallProtectionRemaining;
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Locked for 30 days! ${remaining.inDays} days remaining.'),
+                      content: Text(
+                          'Locked for 30 days! ${remaining.inDays} days remaining.'),
                       backgroundColor: AppColors.danger,
                     ));
                     return;
@@ -196,6 +201,28 @@ class _SettingsScreenState extends State<SettingsScreen>
             _buildSectionHeader('Permissions Status'),
             _buildPermissionsCard(context, vm),
             const SizedBox(height: 24),
+            _buildSectionHeader('Advanced Settings (Optional)'),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                      'Enable Device Admin for advanced protection against uninstallation and tampering. Note: To uninstall later, you must disable this first.',
+                      style:
+                          TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  const SizedBox(height: 12),
+                  _buildPermissionItem('Device Admin App',
+                      vm.isDeviceAdminEnabled, () => vm.requestDeviceAdmin()),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
             _buildSectionHeader('About'),
             Container(
               decoration: BoxDecoration(
@@ -205,34 +232,44 @@ class _SettingsScreenState extends State<SettingsScreen>
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.info_outline, color: AppColors.primary),
-                    title: const Text('About Us', style: TextStyle(fontWeight: FontWeight.w600)),
-                    trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                    leading: const Icon(Icons.info_outline,
+                        color: AppColors.primary),
+                    title: const Text('About Us',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.chevron_right,
+                        color: AppColors.textMuted),
                     onTap: () {
                       showAboutDialog(
                         context: context,
                         applicationName: 'MindLock',
                         applicationVersion: '1.0.0',
-                        applicationIcon: const Icon(Icons.lock, size: 48, color: AppColors.primary),
+                        applicationIcon: const Icon(Icons.lock,
+                            size: 48, color: AppColors.primary),
                         applicationLegalese: '© 2026 MindLock',
                         children: [
                           const SizedBox(height: 16),
-                          const Text('MindLock is your digital wellness guardian. Control social media usage, stop doomscrolling, and protect your focus.'),
+                          const Text(
+                              'MindLock is your digital wellness guardian. Control social media usage, stop doomscrolling, and protect your focus.'),
                         ],
                       );
                     },
                   ),
                   const Divider(height: 1, color: AppColors.cardBorder),
                   ListTile(
-                    leading: const Icon(Icons.privacy_tip_outlined, color: AppColors.primary),
-                    title: const Text('Privacy Policy', style: TextStyle(fontWeight: FontWeight.w600)),
-                    trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                    leading: const Icon(Icons.privacy_tip_outlined,
+                        color: AppColors.primary),
+                    title: const Text('Privacy Policy',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.chevron_right,
+                        color: AppColors.textMuted),
                     onTap: () async {
-                      final Uri url = Uri.parse('https://sites.google.com/view/mind-lock/home');
+                      final Uri url = Uri.parse(
+                          'https://sites.google.com/view/mind-lock/home');
                       if (!await launchUrl(url)) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Could not open Privacy Policy')),
+                            const SnackBar(
+                                content: Text('Could not open Privacy Policy')),
                           );
                         }
                       }
@@ -241,7 +278,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const Divider(height: 1, color: AppColors.cardBorder),
                   ListTile(
                     leading: const Icon(Icons.code, color: AppColors.primary),
-                    title: const Text('Version', style: TextStyle(fontWeight: FontWeight.w600)),
+                    title: const Text('Version',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                     trailing: Text(
                       '$_version ($_buildNumber)',
                       style: const TextStyle(color: AppColors.textMuted),
@@ -355,6 +393,44 @@ class _SettingsScreenState extends State<SettingsScreen>
           const Divider(height: 24, color: AppColors.cardBorder),
           _buildPermissionItem('Do Not Disturb (Study Mode)', vm.isDndGranted,
               () => vm.requestDnd()),
+          const Divider(height: 24, color: AppColors.cardBorder),
+          _buildPermissionItem('Background Execution', vm.isBatteryIgnored,
+              () => vm.requestBatteryIgnore()),
+          const Divider(height: 24, color: AppColors.cardBorder),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('OEM Advanced Settings',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14)),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Required for Xiaomi/Realme/Oppo',
+                      style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => AppSettings.openAppSettings(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white12,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Open', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
         ],
       ),
     );

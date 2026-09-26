@@ -14,8 +14,10 @@ class AppConstants {
   static const String keyBreakDurationSeconds = 'break_duration_seconds';
   static const String keyDailyLimitEnabled = 'daily_limit_enabled';
   static const String keyDailyLimitMinutes = 'daily_limit_minutes';
-  static const String keyUninstallProtectionEnabled = 'uninstall_protection_enabled';
-  static const String keyUninstallProtectionStartDate = 'uninstall_protection_start_date';
+  static const String keyUninstallProtectionEnabled =
+      'uninstall_protection_enabled';
+  static const String keyUninstallProtectionStartDate =
+      'uninstall_protection_start_date';
   static const String keyStudyModeEnabled = 'study_mode_enabled';
   static const String keyStudyModeStartTime = 'study_mode_start_time';
   static const String keyStudyModeEndTime = 'study_mode_end_time';
@@ -28,9 +30,11 @@ class AppConstants {
   static const String keyAppLimitMinsPrefix = 'app_limit_mins_';
   static const String keyStrictModeEnabled = 'strict_mode_enabled';
   static const String keyStrictModeDelayMinutes = 'strict_mode_delay_minutes';
-  static const String keyStrictModeCountdownStart = 'strict_mode_countdown_start';
+  static const String keyStrictModeCountdownStart =
+      'strict_mode_countdown_start';
   static const String keyTargetFeatureToDisable = 'target_feature_to_disable';
-  static const String keyStrictModeDelayLockedUntil = 'strict_mode_delay_locked_until';
+  static const String keyStrictModeDelayLockedUntil =
+      'strict_mode_delay_locked_until';
 
   static const int defaultScrollLimitMinutes = 30;
   static const int defaultBreakIntervalMinutes = 20;

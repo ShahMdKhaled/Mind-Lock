@@ -141,6 +141,23 @@ class MainActivity : FlutterActivity() {
                         result.success(false)
                     }
                 }
+                "isDeviceAdminEnabled" -> {
+                    val devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+                    val componentName = android.content.ComponentName(this, MindLockDeviceAdminReceiver::class.java)
+                    result.success(devicePolicyManager.isAdminActive(componentName))
+                }
+                "requestDeviceAdmin" -> {
+                    val componentName = android.content.ComponentName(this, MindLockDeviceAdminReceiver::class.java)
+                    val intent = Intent(android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                    intent.putExtra(android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
+                    intent.putExtra(android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION, "MindLock requires device admin permission for advanced app protection features.")
+                    try {
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        // In case of error
+                    }
+                    result.success(true)
+                }
                 else -> {
                     result.notImplemented()
                 }

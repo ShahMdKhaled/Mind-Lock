@@ -4,7 +4,8 @@ import '../services/local_storage_service.dart';
 class SettingsRepository {
   final LocalStorageService _localStorage;
 
-  SettingsRepository({required LocalStorageService localStorage}) : _localStorage = localStorage;
+  SettingsRepository({required LocalStorageService localStorage})
+      : _localStorage = localStorage;
 
   Future<AppSettings> loadSettings() async {
     return await _localStorage.loadSettings();
@@ -25,7 +26,8 @@ class SettingsRepository {
   Future<void> setUninstallProtection(bool enabled) async {
     await _localStorage.setBool('uninstall_protection_enabled', enabled);
     if (enabled) {
-      await _localStorage.setString('uninstall_protection_start_date', DateTime.now().toIso8601String());
+      await _localStorage.setString(
+          'uninstall_protection_start_date', DateTime.now().toIso8601String());
     }
   }
 
@@ -71,7 +73,8 @@ class SettingsRepository {
 
   Future<void> setStrictModeCountdownStart(DateTime? dateTime) async {
     if (dateTime != null) {
-      await _localStorage.setString('strict_mode_countdown_start', dateTime.toIso8601String());
+      await _localStorage.setString(
+          'strict_mode_countdown_start', dateTime.toIso8601String());
     } else {
       await _localStorage.prefs.remove('strict_mode_countdown_start');
     }
@@ -87,7 +90,8 @@ class SettingsRepository {
 
   Future<void> setStrictModeDelayLockedUntil(DateTime? dateTime) async {
     if (dateTime != null) {
-      await _localStorage.setString('strict_mode_delay_locked_until', dateTime.toIso8601String());
+      await _localStorage.setString(
+          'strict_mode_delay_locked_until', dateTime.toIso8601String());
     } else {
       await _localStorage.prefs.remove('strict_mode_delay_locked_until');
     }
@@ -107,5 +111,9 @@ class SettingsRepository {
 
   Future<void> setLastBreakTime(DateTime time) async {
     await _localStorage.setLastBreakTime(time);
+  }
+
+  int getDailyBreaksCount() {
+    return _localStorage.getDailyBreaksCount();
   }
 }

@@ -13,11 +13,12 @@ class ReelsBlockOverlay extends StatefulWidget {
   State<ReelsBlockOverlay> createState() => _ReelsBlockOverlayState();
 }
 
-class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTickerProviderStateMixin {
+class _ReelsBlockOverlayState extends State<ReelsBlockOverlay>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  
+
   int _secondsRemaining = 10;
   late Timer _timer;
   late String _currentQuote;
@@ -51,7 +52,7 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
     super.initState();
     _currentQuote = _quotes[Random().nextInt(_quotes.length)];
     _checkOverlayType();
-    
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -83,7 +84,8 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
       if (type == 'break') {
         setState(() {
           _isBreak = true;
-          _currentQuote = "Take a break! You've been using your phone. Rest your eyes for 10 seconds.";
+          _currentQuote =
+              "Take a break! You've been using your phone. Rest your eyes for 10 seconds.";
         });
       } else if (type == 'punishment') {
         final endTime = prefs.getInt('punishment_end_time') ?? 0;
@@ -97,7 +99,8 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
           _isPunishment = true;
           _punishmentAppName = appName;
           _secondsRemaining = remaining > 0 ? remaining : 30;
-          _currentQuote = "You've tried to watch Reels too many times! $appName is blocked as a punishment.";
+          _currentQuote =
+              "You've tried to watch Reels too many times! $appName is blocked as a punishment.";
         });
       }
     } catch (e) {
@@ -138,7 +141,8 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
                     spreadRadius: 5,
                   ),
                 ],
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                border:
+                    Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -171,7 +175,8 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
                           bottom: 16,
                           left: 0,
                           right: 0,
-                          child: Icon(Icons.lock_clock_outlined, color: Colors.white, size: 40),
+                          child: Icon(Icons.lock_clock_outlined,
+                              color: Colors.white, size: 40),
                         ),
                       ],
                     ),
@@ -179,9 +184,17 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
                   const SizedBox(height: 24),
                   // Title
                   Text(
-                    _isBreak ? "Break Time Active" : (_isPunishment ? "$_punishmentAppName Blocked" : "Focus Mode Active"),
+                    _isBreak
+                        ? "Break Time Active"
+                        : (_isPunishment
+                            ? "$_punishmentAppName Blocked"
+                            : "Focus Mode Active"),
                     style: TextStyle(
-                      color: _isBreak ? AppColors.secondary : (_isPunishment ? Colors.redAccent : AppColors.primary),
+                      color: _isBreak
+                          ? AppColors.secondary
+                          : (_isPunishment
+                              ? Colors.redAccent
+                              : AppColors.primary),
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 2,
@@ -208,10 +221,16 @@ class _ReelsBlockOverlayState extends State<ReelsBlockOverlay> with SingleTicker
                         height: 60,
                         width: 60,
                         child: CircularProgressIndicator(
-                          value: _isPunishment ? (_secondsRemaining / 30) : (_secondsRemaining / 10),
+                          value: _isPunishment
+                              ? (_secondsRemaining / 30)
+                              : (_secondsRemaining / 10),
                           strokeWidth: 6,
                           backgroundColor: Colors.white12,
-                          valueColor: AlwaysStoppedAnimation<Color>(_isBreak ? AppColors.secondary : (_isPunishment ? Colors.redAccent : AppColors.primary)),
+                          valueColor: AlwaysStoppedAnimation<Color>(_isBreak
+                              ? AppColors.secondary
+                              : (_isPunishment
+                                  ? Colors.redAccent
+                                  : AppColors.primary)),
                         ),
                       ),
                       Text(

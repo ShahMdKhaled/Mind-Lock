@@ -134,6 +134,20 @@ class MindLockAccessibilityService : AccessibilityService() {
                 prefs.edit().putLong("flutter.last_break_time_ms", now).apply()
                 prefs.edit().putString("flutter.active_overlay_type", "break").apply()
                 
+                // Track daily break count
+                val calendar = java.util.Calendar.getInstance()
+                calendar.timeInMillis = now
+                val todayStr = "${calendar.get(java.util.Calendar.YEAR)}-${calendar.get(java.util.Calendar.MONTH)}-${calendar.get(java.util.Calendar.DAY_OF_MONTH)}"
+                val lastBreakDateStr = try { prefs.getString("flutter.daily_breaks_date", "") } catch (e: Exception) { "" }
+                
+                var currentCount = if (todayStr != lastBreakDateStr) 0L else {
+                    try { prefs.getLong("flutter.daily_breaks_count", 0L) } catch (e: Exception) { 0L }
+                }
+                currentCount++
+                
+                prefs.edit().putLong("flutter.daily_breaks_count", currentCount).apply()
+                prefs.edit().putString("flutter.daily_breaks_date", todayStr).apply()
+                
                 Log.d("MindLock", "Break Time reached - showing popup")
                 
                 handler.post {

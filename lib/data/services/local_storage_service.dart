@@ -4,7 +4,8 @@ import '../../core/constants.dart';
 
 class LocalStorageService {
   static LocalStorageService? _instance;
-  static LocalStorageService get instance => _instance ??= LocalStorageService._();
+  static LocalStorageService get instance =>
+      _instance ??= LocalStorageService._();
   LocalStorageService._();
 
   SharedPreferences? _prefs;
@@ -14,95 +15,146 @@ class LocalStorageService {
   }
 
   SharedPreferences get prefs {
-    assert(_prefs != null, 'LocalStorageService not initialized. Call init() first.');
+    assert(_prefs != null,
+        'LocalStorageService not initialized. Call init() first.');
     return _prefs!;
   }
 
   Future<AppSettings> loadSettings() async {
     await init();
-    final startDateStr = prefs.getString(AppConstants.keyUninstallProtectionStartDate);
-    final blockedAppsJson = prefs.getStringList(AppConstants.keyBlockedApps) ?? [];
-    final reelsBlockedJson = prefs.getStringList(AppConstants.keyReelsBlockedPackages) ?? AppConstants.reelsPackages;
+    final startDateStr =
+        prefs.getString(AppConstants.keyUninstallProtectionStartDate);
+    final blockedAppsJson =
+        prefs.getStringList(AppConstants.keyBlockedApps) ?? [];
+    final reelsBlockedJson =
+        prefs.getStringList(AppConstants.keyReelsBlockedPackages) ??
+            AppConstants.reelsPackages;
 
-    final appLimitsEnabled = prefs.getBool(AppConstants.keyAppLimitsEnabled) ?? false;
-    final limitedPackages = prefs.getStringList(AppConstants.keyAppLimitPackages) ?? [];
+    final appLimitsEnabled =
+        prefs.getBool(AppConstants.keyAppLimitsEnabled) ?? false;
+    final limitedPackages =
+        prefs.getStringList(AppConstants.keyAppLimitPackages) ?? [];
     final Map<String, int> appLimits = {};
     for (final package in limitedPackages) {
-      appLimits[package] = prefs.getInt('${AppConstants.keyAppLimitMinsPrefix}$package') ?? 0;
+      appLimits[package] =
+          prefs.getInt('${AppConstants.keyAppLimitMinsPrefix}$package') ?? 0;
     }
 
-    final strictModeCountdownStartStr = prefs.getString(AppConstants.keyStrictModeCountdownStart);
-    final strictModeDelayLockedUntilStr = prefs.getString(AppConstants.keyStrictModeDelayLockedUntil);
+    final strictModeCountdownStartStr =
+        prefs.getString(AppConstants.keyStrictModeCountdownStart);
+    final strictModeDelayLockedUntilStr =
+        prefs.getString(AppConstants.keyStrictModeDelayLockedUntil);
 
     return AppSettings(
-      reelsBlockerEnabled: prefs.getBool(AppConstants.keyReelsBlockerEnabled) ?? false,
+      reelsBlockerEnabled:
+          prefs.getBool(AppConstants.keyReelsBlockerEnabled) ?? false,
       reelsBlockedPackages: reelsBlockedJson,
-      scrollLimitEnabled: prefs.getBool(AppConstants.keyScrollLimitEnabled) ?? false,
-      scrollLimitMinutes: prefs.getInt(AppConstants.keyScrollLimitMinutes) ?? AppConstants.defaultScrollLimitMinutes,
+      scrollLimitEnabled:
+          prefs.getBool(AppConstants.keyScrollLimitEnabled) ?? false,
+      scrollLimitMinutes: prefs.getInt(AppConstants.keyScrollLimitMinutes) ??
+          AppConstants.defaultScrollLimitMinutes,
       breakEnabled: prefs.getBool(AppConstants.keyBreakEnabled) ?? false,
-      breakIntervalMinutes: prefs.getInt(AppConstants.keyBreakIntervalMinutes) ?? AppConstants.defaultBreakIntervalMinutes,
-      breakDurationSeconds: prefs.getInt(AppConstants.keyBreakDurationSeconds) ?? AppConstants.defaultBreakDurationSeconds,
-      dailyLimitEnabled: prefs.getBool(AppConstants.keyDailyLimitEnabled) ?? false,
-      dailyLimitMinutes: prefs.getInt(AppConstants.keyDailyLimitMinutes) ?? AppConstants.defaultDailyLimitMinutes,
-      uninstallProtectionEnabled: prefs.getBool(AppConstants.keyUninstallProtectionEnabled) ?? false,
-      uninstallProtectionStartDate: startDateStr != null ? DateTime.tryParse(startDateStr) : null,
-      studyModeEnabled: prefs.getBool(AppConstants.keyStudyModeEnabled) ?? false,
+      breakIntervalMinutes:
+          prefs.getInt(AppConstants.keyBreakIntervalMinutes) ??
+              AppConstants.defaultBreakIntervalMinutes,
+      breakDurationSeconds:
+          prefs.getInt(AppConstants.keyBreakDurationSeconds) ??
+              AppConstants.defaultBreakDurationSeconds,
+      dailyLimitEnabled:
+          prefs.getBool(AppConstants.keyDailyLimitEnabled) ?? false,
+      dailyLimitMinutes: prefs.getInt(AppConstants.keyDailyLimitMinutes) ??
+          AppConstants.defaultDailyLimitMinutes,
+      uninstallProtectionEnabled:
+          prefs.getBool(AppConstants.keyUninstallProtectionEnabled) ?? false,
+      uninstallProtectionStartDate:
+          startDateStr != null ? DateTime.tryParse(startDateStr) : null,
+      studyModeEnabled:
+          prefs.getBool(AppConstants.keyStudyModeEnabled) ?? false,
       studyModeStartTime: prefs.getString(AppConstants.keyStudyModeStartTime),
       studyModeEndTime: prefs.getString(AppConstants.keyStudyModeEndTime),
       blockedApps: blockedAppsJson,
       appLimitsEnabled: appLimitsEnabled,
       appLimits: appLimits,
-      strictModeEnabled: prefs.getBool(AppConstants.keyStrictModeEnabled) ?? false,
-      strictModeDelayMinutes: prefs.getInt(AppConstants.keyStrictModeDelayMinutes) ?? 5,
-      strictModeCountdownStart: strictModeCountdownStartStr != null ? DateTime.tryParse(strictModeCountdownStartStr) : null,
-      targetFeatureToDisable: prefs.getString(AppConstants.keyTargetFeatureToDisable),
-      strictModeDelayLockedUntil: strictModeDelayLockedUntilStr != null ? DateTime.tryParse(strictModeDelayLockedUntilStr) : null,
+      strictModeEnabled:
+          prefs.getBool(AppConstants.keyStrictModeEnabled) ?? false,
+      strictModeDelayMinutes:
+          prefs.getInt(AppConstants.keyStrictModeDelayMinutes) ?? 5,
+      strictModeCountdownStart: strictModeCountdownStartStr != null
+          ? DateTime.tryParse(strictModeCountdownStartStr)
+          : null,
+      targetFeatureToDisable:
+          prefs.getString(AppConstants.keyTargetFeatureToDisable),
+      strictModeDelayLockedUntil: strictModeDelayLockedUntilStr != null
+          ? DateTime.tryParse(strictModeDelayLockedUntilStr)
+          : null,
     );
   }
 
   Future<void> saveSettings(AppSettings settings) async {
-    await prefs.setBool(AppConstants.keyReelsBlockerEnabled, settings.reelsBlockerEnabled);
-    await prefs.setBool(AppConstants.keyScrollLimitEnabled, settings.scrollLimitEnabled);
-    await prefs.setInt(AppConstants.keyScrollLimitMinutes, settings.scrollLimitMinutes);
+    await prefs.setBool(
+        AppConstants.keyReelsBlockerEnabled, settings.reelsBlockerEnabled);
+    await prefs.setBool(
+        AppConstants.keyScrollLimitEnabled, settings.scrollLimitEnabled);
+    await prefs.setInt(
+        AppConstants.keyScrollLimitMinutes, settings.scrollLimitMinutes);
     await prefs.setBool(AppConstants.keyBreakEnabled, settings.breakEnabled);
-    await prefs.setInt(AppConstants.keyBreakIntervalMinutes, settings.breakIntervalMinutes);
-    await prefs.setInt(AppConstants.keyBreakDurationSeconds, settings.breakDurationSeconds);
-    await prefs.setBool(AppConstants.keyDailyLimitEnabled, settings.dailyLimitEnabled);
-    await prefs.setInt(AppConstants.keyDailyLimitMinutes, settings.dailyLimitMinutes);
-    await prefs.setBool(AppConstants.keyUninstallProtectionEnabled, settings.uninstallProtectionEnabled);
+    await prefs.setInt(
+        AppConstants.keyBreakIntervalMinutes, settings.breakIntervalMinutes);
+    await prefs.setInt(
+        AppConstants.keyBreakDurationSeconds, settings.breakDurationSeconds);
+    await prefs.setBool(
+        AppConstants.keyDailyLimitEnabled, settings.dailyLimitEnabled);
+    await prefs.setInt(
+        AppConstants.keyDailyLimitMinutes, settings.dailyLimitMinutes);
+    await prefs.setBool(AppConstants.keyUninstallProtectionEnabled,
+        settings.uninstallProtectionEnabled);
     if (settings.uninstallProtectionStartDate != null) {
-      await prefs.setString(AppConstants.keyUninstallProtectionStartDate, settings.uninstallProtectionStartDate!.toIso8601String());
+      await prefs.setString(AppConstants.keyUninstallProtectionStartDate,
+          settings.uninstallProtectionStartDate!.toIso8601String());
     }
-    await prefs.setBool(AppConstants.keyStudyModeEnabled, settings.studyModeEnabled);
+    await prefs.setBool(
+        AppConstants.keyStudyModeEnabled, settings.studyModeEnabled);
     if (settings.studyModeStartTime != null) {
-      await prefs.setString(AppConstants.keyStudyModeStartTime, settings.studyModeStartTime!);
+      await prefs.setString(
+          AppConstants.keyStudyModeStartTime, settings.studyModeStartTime!);
     }
     if (settings.studyModeEndTime != null) {
-      await prefs.setString(AppConstants.keyStudyModeEndTime, settings.studyModeEndTime!);
+      await prefs.setString(
+          AppConstants.keyStudyModeEndTime, settings.studyModeEndTime!);
     }
-    await prefs.setStringList(AppConstants.keyReelsBlockedPackages, settings.reelsBlockedPackages);
-    await prefs.setStringList(AppConstants.keyBlockedApps, settings.blockedApps);
-    
-    await prefs.setBool(AppConstants.keyAppLimitsEnabled, settings.appLimitsEnabled);
-    await prefs.setStringList(AppConstants.keyAppLimitPackages, settings.appLimits.keys.toList());
+    await prefs.setStringList(
+        AppConstants.keyReelsBlockedPackages, settings.reelsBlockedPackages);
+    await prefs.setStringList(
+        AppConstants.keyBlockedApps, settings.blockedApps);
+
+    await prefs.setBool(
+        AppConstants.keyAppLimitsEnabled, settings.appLimitsEnabled);
+    await prefs.setStringList(
+        AppConstants.keyAppLimitPackages, settings.appLimits.keys.toList());
     for (final entry in settings.appLimits.entries) {
-      await prefs.setInt('${AppConstants.keyAppLimitMinsPrefix}${entry.key}', entry.value);
+      await prefs.setInt(
+          '${AppConstants.keyAppLimitMinsPrefix}${entry.key}', entry.value);
     }
 
-    await prefs.setBool(AppConstants.keyStrictModeEnabled, settings.strictModeEnabled);
-    await prefs.setInt(AppConstants.keyStrictModeDelayMinutes, settings.strictModeDelayMinutes);
+    await prefs.setBool(
+        AppConstants.keyStrictModeEnabled, settings.strictModeEnabled);
+    await prefs.setInt(AppConstants.keyStrictModeDelayMinutes,
+        settings.strictModeDelayMinutes);
     if (settings.strictModeCountdownStart != null) {
-      await prefs.setString(AppConstants.keyStrictModeCountdownStart, settings.strictModeCountdownStart!.toIso8601String());
+      await prefs.setString(AppConstants.keyStrictModeCountdownStart,
+          settings.strictModeCountdownStart!.toIso8601String());
     } else {
       await prefs.remove(AppConstants.keyStrictModeCountdownStart);
     }
     if (settings.targetFeatureToDisable != null) {
-      await prefs.setString(AppConstants.keyTargetFeatureToDisable, settings.targetFeatureToDisable!);
+      await prefs.setString(AppConstants.keyTargetFeatureToDisable,
+          settings.targetFeatureToDisable!);
     } else {
       await prefs.remove(AppConstants.keyTargetFeatureToDisable);
     }
     if (settings.strictModeDelayLockedUntil != null) {
-      await prefs.setString(AppConstants.keyStrictModeDelayLockedUntil, settings.strictModeDelayLockedUntil!.toIso8601String());
+      await prefs.setString(AppConstants.keyStrictModeDelayLockedUntil,
+          settings.strictModeDelayLockedUntil!.toIso8601String());
     } else {
       await prefs.remove(AppConstants.keyStrictModeDelayLockedUntil);
     }
@@ -139,6 +191,18 @@ class LocalStorageService {
   }
 
   Future<void> setLastBreakTime(DateTime time) async {
-    await prefs.setString(AppConstants.keyLastBreakTime, time.toIso8601String());
+    await prefs.setString(
+        AppConstants.keyLastBreakTime, time.toIso8601String());
+  }
+
+  int getDailyBreaksCount() {
+    final now = DateTime.now();
+    final todayStr = "${now.year}-${now.month}-${now.day}";
+    final dateStr = prefs.getString("daily_breaks_date");
+
+    if (todayStr != dateStr) {
+      return 0;
+    }
+    return prefs.getInt("daily_breaks_count") ?? 0;
   }
 }

@@ -31,7 +31,8 @@ class _StrictModeDialogState extends State<StrictModeDialog> {
   @override
   void initState() {
     super.initState();
-    if (widget.settings.isStrictModeDelayActive && widget.settings.targetFeatureToDisable == widget.featureKey) {
+    if (widget.settings.isStrictModeDelayActive &&
+        widget.settings.targetFeatureToDisable == widget.featureKey) {
       _startTimer();
     }
   }
@@ -48,7 +49,8 @@ class _StrictModeDialogState extends State<StrictModeDialog> {
   @override
   void dispose() {
     _timer?.cancel();
-    if (widget.settings.isStrictModeDelayActive && widget.settings.targetFeatureToDisable == widget.featureKey) {
+    if (widget.settings.isStrictModeDelayActive &&
+        widget.settings.targetFeatureToDisable == widget.featureKey) {
       widget.onCancelCountdown();
     }
     super.dispose();
@@ -65,9 +67,12 @@ class _StrictModeDialogState extends State<StrictModeDialog> {
       if (isCompleted) {
         return AlertDialog(
           title: Text('Disable ${widget.featureName}'),
-          content: const Text('The delay timer has completed. You can now disable this feature.'),
+          content: const Text(
+              'The delay timer has completed. You can now disable this feature.'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -81,35 +86,47 @@ class _StrictModeDialogState extends State<StrictModeDialog> {
       final remaining = settings.strictModeDelayRemaining;
       final minutes = remaining.inMinutes;
       final seconds = remaining.inSeconds % 60;
-      final timeStr = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+      final timeStr =
+          '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
       return AlertDialog(
         title: const Text('Strict Mode Active'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('You must wait until the delay timer completes to disable ${widget.featureName}.'),
+            Text(
+                'You must wait until the delay timer completes to disable ${widget.featureName}.'),
             const SizedBox(height: 16),
-            Text(timeStr, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary)),
+            Text(timeStr,
+                style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary)),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+          TextButton(
+              onPressed: () => Navigator.pop(context), child: const Text('OK')),
         ],
       );
     } else if ((isActive || isCompleted) && !isTarget) {
       return AlertDialog(
         title: const Text('Another Timer Active'),
-        content: const Text('A delay timer is already running for another feature. You can only disable one feature at a time.'),
+        content: const Text(
+            'A delay timer is already running for another feature. You can only disable one feature at a time.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+          TextButton(
+              onPressed: () => Navigator.pop(context), child: const Text('OK')),
         ],
       );
     } else {
       return AlertDialog(
         title: const Text('Start Delay Timer?'),
-        content: Text('Strict Mode is active. To disable ${widget.featureName}, you must start a ${settings.strictModeDelayMinutes}-minute timer. The option cannot be disabled until the timer ends.'),
+        content: Text(
+            'Strict Mode is active. To disable ${widget.featureName}, you must start a ${settings.strictModeDelayMinutes}-minute timer. The option cannot be disabled until the timer ends.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
               await widget.onStartCountdown();

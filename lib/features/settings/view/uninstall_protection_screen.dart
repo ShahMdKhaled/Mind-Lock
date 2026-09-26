@@ -14,7 +14,10 @@ class UninstallProtectionScreen extends StatelessWidget {
     final settings = vm.settings;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Uninstall Protection'), elevation: 0, backgroundColor: Colors.transparent),
+      appBar: AppBar(
+          title: const Text('Uninstall Protection'),
+          elevation: 0,
+          backgroundColor: Colors.transparent),
       extendBodyBehindAppBar: true,
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
@@ -28,11 +31,16 @@ class UninstallProtectionScreen extends StatelessWidget {
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: settings.uninstallProtectionEnabled ? AppColors.primary.withValues(alpha: 0.5) : AppColors.cardBorder,
+                    color: settings.uninstallProtectionEnabled
+                        ? AppColors.primary.withValues(alpha: 0.5)
+                        : AppColors.cardBorder,
                   ),
                   boxShadow: [
                     if (settings.uninstallProtectionEnabled)
-                      BoxShadow(color: AppColors.primary.withValues(alpha: 0.1), blurRadius: 20, spreadRadius: 5)
+                      BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          blurRadius: 20,
+                          spreadRadius: 5)
                   ],
                 ),
                 child: Column(
@@ -44,9 +52,16 @@ class UninstallProtectionScreen extends StatelessWidget {
                           child: const Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Master Shield', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                              Text('Master Shield',
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary)),
                               SizedBox(height: 4),
-                              Text('Prevent app uninstallation', style: TextStyle(fontSize: 14, color: AppColors.textMuted)),
+                              Text('Prevent app uninstallation',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textMuted)),
                             ],
                           ),
                         ),
@@ -55,18 +70,28 @@ class UninstallProtectionScreen extends StatelessWidget {
                           onChanged: (v) {
                             if (!v && settings.uninstallProtectionEnabled) {
                               if (settings.isUninstallProtectionActive) {
-                                final remaining = settings.uninstallProtectionRemaining;
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text('Locked for 30 days! ${remaining.inDays} days remaining.'),
+                                final remaining =
+                                    settings.uninstallProtectionRemaining;
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(SnackBar(
+                                  content: Text(
+                                      'Locked for 30 days! ${remaining.inDays} days remaining.'),
                                   backgroundColor: AppColors.danger,
                                 ));
                                 return;
                               }
                               if (settings.strictModeEnabled) {
-                                if (settings.targetFeatureToDisable == 'uninstall_protection' && !settings.isStrictModeDelayActive && settings.strictModeCountdownStart != null) {
+                                if (settings.targetFeatureToDisable ==
+                                        'uninstall_protection' &&
+                                    !settings.isStrictModeDelayActive &&
+                                    settings.strictModeCountdownStart != null) {
                                   vm.toggleUninstallProtection(false);
                                 } else {
-                                  _showCountdownOrStartDialog(context, vm, 'uninstall_protection', 'Uninstall Protection');
+                                  _showCountdownOrStartDialog(
+                                      context,
+                                      vm,
+                                      'uninstall_protection',
+                                      'Uninstall Protection');
                                 }
                               } else {
                                 vm.toggleUninstallProtection(false);
@@ -82,38 +107,42 @@ class UninstallProtectionScreen extends StatelessWidget {
                   ],
                 ),
               ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                'INFO & DETAILS',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  'INFO & DETAILS',
+                  style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            _buildInfoCard(
-              'What it does',
-              'This blocks access to the Android App Info page for MindLock, which prevents users from force stopping or uninstalling the app. It also intercepts the package installer uninstallation confirmation screen.',
-              Icons.shield,
-            ),
-            const SizedBox(height: 12),
-            _buildInfoCard(
-              '30-Day Lock',
-              'Once enabled, Uninstall Protection is strictly locked for 30 days. You will not be able to disable this option before the 30-day period expires.',
-              Icons.lock_clock,
-            ),
-            const SizedBox(height: 12),
-            _buildInfoCard(
-              'How to disable',
-              'After the 30-day lock expires, if Strict Mode is enabled, you will need to start a delay countdown timer before you can switch this option off.',
-              Icons.hourglass_bottom,
-            ),
-          ],
+              const SizedBox(height: 12),
+              _buildInfoCard(
+                'What it does',
+                'This blocks access to the Android App Info page for MindLock, which prevents users from force stopping or uninstalling the app. It also intercepts the package installer uninstallation confirmation screen.',
+                Icons.shield,
+              ),
+              const SizedBox(height: 12),
+              _buildInfoCard(
+                '30-Day Lock',
+                'Once enabled, Uninstall Protection is strictly locked for 30 days. You will not be able to disable this option before the 30-day period expires.',
+                Icons.lock_clock,
+              ),
+              const SizedBox(height: 12),
+              _buildInfoCard(
+                'How to disable',
+                'After the 30-day lock expires, if Strict Mode is enabled, you will need to start a delay countdown timer before you can switch this option off.',
+                Icons.hourglass_bottom,
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildInfoCard(String title, String desc, IconData icon) {
     return Container(
@@ -132,9 +161,15 @@ class UninstallProtectionScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 6),
-                Text(desc, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+                Text(desc,
+                    style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        height: 1.4)),
               ],
             ),
           ),
@@ -143,7 +178,8 @@ class UninstallProtectionScreen extends StatelessWidget {
     );
   }
 
-  void _showCountdownOrStartDialog(BuildContext context, SettingsViewModel vm, String featureKey, String featureName) {
+  void _showCountdownOrStartDialog(BuildContext context, SettingsViewModel vm,
+      String featureKey, String featureName) {
     showDialog(
       context: context,
       builder: (ctx) => ChangeNotifierProvider.value(

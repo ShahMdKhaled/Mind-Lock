@@ -105,7 +105,10 @@ class _ReelsBlockerScreenContent extends StatelessWidget {
                 final hasPerms = await vm.checkPermissions();
                 if (!context.mounted) return;
                 if (!hasPerms) {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PermissionScreen()));
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const PermissionScreen()));
                   return;
                 }
               }

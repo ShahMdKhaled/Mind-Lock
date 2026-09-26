@@ -53,13 +53,15 @@ class AppSettings {
     if (!uninstallProtectionEnabled || uninstallProtectionStartDate == null) {
       return false;
     }
-    final protectionEnd = uninstallProtectionStartDate!.add(const Duration(days: 30));
+    final protectionEnd =
+        uninstallProtectionStartDate!.add(const Duration(days: 30));
     return DateTime.now().isBefore(protectionEnd);
   }
 
   bool get isStrictModeDelayActive {
     if (!strictModeEnabled || strictModeCountdownStart == null) return false;
-    final delayEnd = strictModeCountdownStart!.add(Duration(minutes: strictModeDelayMinutes));
+    final delayEnd = strictModeCountdownStart!
+        .add(Duration(minutes: strictModeDelayMinutes));
     return DateTime.now().isBefore(delayEnd);
   }
 
@@ -70,14 +72,16 @@ class AppSettings {
 
   Duration get strictModeDelayRemaining {
     if (!isStrictModeDelayActive) return Duration.zero;
-    final delayEnd = strictModeCountdownStart!.add(Duration(minutes: strictModeDelayMinutes));
+    final delayEnd = strictModeCountdownStart!
+        .add(Duration(minutes: strictModeDelayMinutes));
     return delayEnd.difference(DateTime.now());
   }
 
   // Helper getters
   Duration get uninstallProtectionRemaining {
     if (!isUninstallProtectionActive) return Duration.zero;
-    final protectionEnd = uninstallProtectionStartDate!.add(const Duration(days: 30));
+    final protectionEnd =
+        uninstallProtectionStartDate!.add(const Duration(days: 30));
     return protectionEnd.difference(DateTime.now());
   }
 
@@ -116,8 +120,10 @@ class AppSettings {
       breakDurationSeconds: breakDurationSeconds ?? this.breakDurationSeconds,
       dailyLimitEnabled: dailyLimitEnabled ?? this.dailyLimitEnabled,
       dailyLimitMinutes: dailyLimitMinutes ?? this.dailyLimitMinutes,
-      uninstallProtectionEnabled: uninstallProtectionEnabled ?? this.uninstallProtectionEnabled,
-      uninstallProtectionStartDate: uninstallProtectionStartDate ?? this.uninstallProtectionStartDate,
+      uninstallProtectionEnabled:
+          uninstallProtectionEnabled ?? this.uninstallProtectionEnabled,
+      uninstallProtectionStartDate:
+          uninstallProtectionStartDate ?? this.uninstallProtectionStartDate,
       studyModeEnabled: studyModeEnabled ?? this.studyModeEnabled,
       studyModeStartTime: studyModeStartTime ?? this.studyModeStartTime,
       studyModeEndTime: studyModeEndTime ?? this.studyModeEndTime,
@@ -125,10 +131,16 @@ class AppSettings {
       appLimitsEnabled: appLimitsEnabled ?? this.appLimitsEnabled,
       appLimits: appLimits ?? this.appLimits,
       strictModeEnabled: strictModeEnabled ?? this.strictModeEnabled,
-      strictModeDelayMinutes: strictModeDelayMinutes ?? this.strictModeDelayMinutes,
-      strictModeCountdownStart: clearStrictModeState ? null : (strictModeCountdownStart ?? this.strictModeCountdownStart),
-      targetFeatureToDisable: clearStrictModeState ? null : (targetFeatureToDisable ?? this.targetFeatureToDisable),
-      strictModeDelayLockedUntil: strictModeDelayLockedUntil ?? this.strictModeDelayLockedUntil,
+      strictModeDelayMinutes:
+          strictModeDelayMinutes ?? this.strictModeDelayMinutes,
+      strictModeCountdownStart: clearStrictModeState
+          ? null
+          : (strictModeCountdownStart ?? this.strictModeCountdownStart),
+      targetFeatureToDisable: clearStrictModeState
+          ? null
+          : (targetFeatureToDisable ?? this.targetFeatureToDisable),
+      strictModeDelayLockedUntil:
+          strictModeDelayLockedUntil ?? this.strictModeDelayLockedUntil,
     );
   }
 }

@@ -5,6 +5,7 @@ import '../../../data/models/app_settings.dart';
 import '../../../data/repositories/settings_repository.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../data/services/usage_data_service.dart';
+import '../../../data/services/app_cache_service.dart' as import_app_cache;
 import 'package:permission_handler/permission_handler.dart';
 
 class AppLimitsViewModel extends ChangeNotifier {
@@ -39,12 +40,13 @@ class AppLimitsViewModel extends ChangeNotifier {
 
     // Cache limited apps for instant display
     final futures = _settings.appLimits.keys.map((pkg) async {
-       try {
-         final info = await InstalledApps.getAppInfo(pkg, null);
-         if (info != null) {
-           _limitedAppsCache[pkg] = info;
-         }
-       } catch (_) {}
+      try {
+        final info =
+            await import_app_cache.AppCacheService.instance.getAppInfo(pkg);
+        if (info != null) {
+          _limitedAppsCache[pkg] = info;
+        }
+      } catch (_) {}
     });
     await Future.wait(futures);
 
@@ -68,9 +70,20 @@ class AppLimitsViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final allApps = await InstalledApps.getInstalledApps(false, true);
+      final allAppsRaw = await InstalledApps.getInstalledApps(false, false);
       final userAppsRaw = await InstalledApps.getInstalledApps(true, false);
       final userAppPackages = userAppsRaw.map((a) => a.packageName).toSet();
+
+      final List<AppInfo> allApps = [];
+      for (var app in allAppsRaw) {
+        final cachedApp = await import_app_cache.AppCacheService.instance
+            .getAppInfo(app.packageName);
+        if (cachedApp != null) {
+          allApps.add(cachedApp);
+        } else {
+          allApps.add(app);
+        }
+      }
 
       final usageInfos = await UsageDataService.instance.getDailyUsage();
       final usageMap = {

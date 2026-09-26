@@ -3,17 +3,20 @@ import '../../core/constants.dart';
 
 class NotificationService {
   static NotificationService? _instance;
-  static NotificationService get instance => _instance ??= NotificationService._();
+  static NotificationService get instance =>
+      _instance ??= NotificationService._();
   NotificationService._();
 
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
 
   Future<void> init() async {
     if (_isInitialized) return;
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings = InitializationSettings(
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
       android: initializationSettingsAndroid,
     );
     await _notifications.initialize(initializationSettings);
@@ -22,7 +25,8 @@ class NotificationService {
 
   Future<void> showStudyModeNotification() async {
     await init();
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       AppConstants.notifChannelStudy,
       'Study Mode',
       channelDescription: 'Active while you focus',
@@ -32,7 +36,8 @@ class NotificationService {
       autoCancel: false,
     );
 
-    const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
+    const NotificationDetails platformDetails =
+        NotificationDetails(android: androidDetails);
 
     await _notifications.show(
       AppConstants.notifStudyModeId,
@@ -48,7 +53,8 @@ class NotificationService {
 
   Future<void> showBreakNotification(int seconds) async {
     await init();
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
       AppConstants.notifChannelBreak,
       'Break Time',
       channelDescription: 'Time for a break',
@@ -56,7 +62,8 @@ class NotificationService {
       priority: Priority.high,
     );
 
-    const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
+    const NotificationDetails platformDetails =
+        NotificationDetails(android: androidDetails);
 
     await _notifications.show(
       AppConstants.notifBreakId,

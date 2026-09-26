@@ -13,6 +13,7 @@ class PermissionViewModel extends BaseViewModel {
   bool _isNotificationGranted = false;
   bool _isDndGranted = false;
   bool _isBatteryIgnored = false;
+  bool _isDeviceAdminEnabled = false;
 
   bool get isUsageGranted => _isUsageGranted;
   bool get isAccessibilityEnabled => _isAccessibilityEnabled;
@@ -20,9 +21,16 @@ class PermissionViewModel extends BaseViewModel {
   bool get isNotificationGranted => _isNotificationGranted;
   bool get isDndGranted => _isDndGranted;
   bool get isBatteryIgnored => _isBatteryIgnored;
-  bool get allGranted => _isUsageGranted && _isAccessibilityEnabled && _isOverlayGranted && _isDndGranted && _isBatteryIgnored;
+  bool get isDeviceAdminEnabled => _isDeviceAdminEnabled;
+  bool get allGranted =>
+      _isUsageGranted &&
+      _isAccessibilityEnabled &&
+      _isOverlayGranted &&
+      _isDndGranted &&
+      _isBatteryIgnored;
 
-  PermissionViewModel({PermissionRepository? permissionRepo}) : _permissionRepo = permissionRepo ?? getIt<PermissionRepository>() {
+  PermissionViewModel({PermissionRepository? permissionRepo})
+      : _permissionRepo = permissionRepo ?? getIt<PermissionRepository>() {
     checkAll();
   }
 
@@ -30,15 +38,19 @@ class PermissionViewModel extends BaseViewModel {
     if (delayed) {
       await Future.delayed(const Duration(milliseconds: 500));
     }
-    
+
     setState(ViewState.loading);
     try {
       _isUsageGranted = await _permissionRepo.isUsageAccessGranted();
-      _isAccessibilityEnabled = await _permissionRepo.isAccessibilityServiceEnabled();
+      _isAccessibilityEnabled =
+          await _permissionRepo.isAccessibilityServiceEnabled();
       _isOverlayGranted = await _permissionRepo.isOverlayPermissionGranted();
-      _isNotificationGranted = await _permissionRepo.isNotificationPermissionGranted();
-      _isDndGranted = await getIt<StudyModeService>().checkNotificationPolicyPermission();
+      _isNotificationGranted =
+          await _permissionRepo.isNotificationPermissionGranted();
+      _isDndGranted =
+          await getIt<StudyModeService>().checkNotificationPolicyPermission();
       _isBatteryIgnored = await _permissionRepo.isBatteryOptimizationIgnored();
+      _isDeviceAdminEnabled = await _permissionRepo.isDeviceAdminEnabled();
       setState(ViewState.idle);
     } catch (e) {
       setError(e.toString());
@@ -70,7 +82,7 @@ class PermissionViewModel extends BaseViewModel {
 
   Future<void> requestBatteryIgnore() async {
     await _permissionRepo.requestIgnoreBatteryOptimization();
-    
+
     // Poll for status since system dialog might not trigger lifecycle events
     for (int i = 0; i < 15; i++) {
       await Future.delayed(const Duration(seconds: 1));
@@ -80,6 +92,12 @@ class PermissionViewModel extends BaseViewModel {
         break;
       }
     }
+    await checkAll();
+  }
+
+  Future<void> requestDeviceAdmin() async {
+    await _permissionRepo.requestDeviceAdmin();
+    await Future.delayed(const Duration(seconds: 2));
     await checkAll();
   }
 }

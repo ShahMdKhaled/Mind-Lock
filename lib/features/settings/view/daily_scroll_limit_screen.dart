@@ -13,7 +13,10 @@ class DailyScrollLimitScreen extends StatelessWidget {
     final settings = vm.settings;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Daily Scroll Limit'), elevation: 0, backgroundColor: Colors.transparent),
+      appBar: AppBar(
+          title: const Text('Daily Scroll Limit'),
+          elevation: 0,
+          backgroundColor: Colors.transparent),
       extendBodyBehindAppBar: true,
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
@@ -27,11 +30,16 @@ class DailyScrollLimitScreen extends StatelessWidget {
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: settings.scrollLimitEnabled ? AppColors.warning.withValues(alpha: 0.5) : AppColors.cardBorder,
+                    color: settings.scrollLimitEnabled
+                        ? AppColors.warning.withValues(alpha: 0.5)
+                        : AppColors.cardBorder,
                   ),
                   boxShadow: [
                     if (settings.scrollLimitEnabled)
-                      BoxShadow(color: AppColors.warning.withValues(alpha: 0.1), blurRadius: 20, spreadRadius: 5)
+                      BoxShadow(
+                          color: AppColors.warning.withValues(alpha: 0.1),
+                          blurRadius: 20,
+                          spreadRadius: 5)
                   ],
                 ),
                 child: Column(
@@ -43,9 +51,16 @@ class DailyScrollLimitScreen extends StatelessWidget {
                           child: const Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Master Shield', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                              Text('Master Shield',
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary)),
                               SizedBox(height: 4),
-                              Text('Set maximum daily browsing time', style: TextStyle(fontSize: 14, color: AppColors.textMuted)),
+                              Text('Set maximum daily browsing time',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textMuted)),
                             ],
                           ),
                         ),
@@ -61,19 +76,28 @@ class DailyScrollLimitScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Scroll Limit', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          const Text('Scroll Limit',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16)),
                           Row(
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.remove, size: 24, color: AppColors.warning),
+                                icon: const Icon(Icons.remove,
+                                    size: 24, color: AppColors.warning),
                                 onPressed: settings.scrollLimitMinutes > 5
-                                    ? () => vm.updateScrollLimitMinutes(settings.scrollLimitMinutes - 5)
+                                    ? () => vm.updateScrollLimitMinutes(
+                                        settings.scrollLimitMinutes - 5)
                                     : null,
                               ),
-                              Text('${settings.scrollLimitMinutes} min', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                              Text('${settings.scrollLimitMinutes} min',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18)),
                               IconButton(
-                                icon: const Icon(Icons.add, size: 24, color: AppColors.warning),
-                                onPressed: () => vm.updateScrollLimitMinutes(settings.scrollLimitMinutes + 5),
+                                icon: const Icon(Icons.add,
+                                    size: 24, color: AppColors.warning),
+                                onPressed: () => vm.updateScrollLimitMinutes(
+                                    settings.scrollLimitMinutes + 5),
                               ),
                             ],
                           ),
@@ -88,7 +112,11 @@ class DailyScrollLimitScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
                   'INFO & DETAILS',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                  style: TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2),
                 ),
               ),
               const SizedBox(height: 12),
@@ -127,9 +155,15 @@ class DailyScrollLimitScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 6),
-                Text(desc, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+                Text(desc,
+                    style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        height: 1.4)),
               ],
             ),
           ),

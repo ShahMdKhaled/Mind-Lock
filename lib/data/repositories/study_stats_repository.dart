@@ -3,14 +3,14 @@ import '../services/local_storage_service.dart';
 
 class StudyStatsRepository {
   final LocalStorageService _storageService = LocalStorageService.instance;
-  
+
   static const String _keyDailyStats = 'study_daily_stats_json';
 
   Future<Map<String, int>> getDailyStats() async {
     await _storageService.init();
     final jsonStr = _storageService.get(_keyDailyStats, null) as String?;
     if (jsonStr == null) return {};
-    
+
     try {
       final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
       return decoded.map((key, value) => MapEntry(key, value as int));
@@ -22,10 +22,10 @@ class StudyStatsRepository {
   Future<void> saveSession(int minutes) async {
     final stats = await getDailyStats();
     final today = _getDateString(DateTime.now());
-    
+
     final currentMinutes = stats[today] ?? 0;
     stats[today] = currentMinutes + minutes;
-    
+
     await _saveStats(stats);
   }
 
@@ -38,7 +38,7 @@ class StudyStatsRepository {
         stats.remove(key);
       }
     }
-    
+
     final jsonStr = jsonEncode(stats);
     await _storageService.setString(_keyDailyStats, jsonStr);
   }
@@ -51,7 +51,8 @@ class StudyStatsRepository {
 
   Future<int> getYesterdayStudyMinutes() async {
     final stats = await getDailyStats();
-    final yesterday = _getDateString(DateTime.now().subtract(const Duration(days: 1)));
+    final yesterday =
+        _getDateString(DateTime.now().subtract(const Duration(days: 1)));
     return stats[yesterday] ?? 0;
   }
 
