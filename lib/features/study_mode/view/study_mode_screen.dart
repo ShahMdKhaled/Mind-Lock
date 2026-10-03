@@ -351,8 +351,9 @@ class _StudyModeScreenContent extends StatelessWidget {
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
                   // Show label every 5 days to avoid crowding
-                  if (index % 5 != 0 || index >= sortedEntries.length)
+                  if (index % 5 != 0 || index >= sortedEntries.length) {
                     return const Text('');
+                  }
 
                   final dateStr =
                       sortedEntries[index].key; // Format: 2026-08-20

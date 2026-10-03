@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import '../../../shared/widgets/strict_mode_dialog.dart';
@@ -19,8 +18,8 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
-  String _version = AppConstants.appVersion;
-  String _buildNumber = AppConstants.appBuildNumber;
+  final String _version = AppConstants.appVersion;
+  final String _buildNumber = AppConstants.appBuildNumber;
 
   @override
   void initState() {
@@ -31,19 +30,6 @@ class _SettingsScreenState extends State<SettingsScreen>
         context.read<SettingsViewModel>().checkPermissions();
       }
     });
-    _loadPackageInfo();
-  }
-
-  Future<void> _loadPackageInfo() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      if (mounted) {
-        setState(() {
-          _version = packageInfo.version;
-          _buildNumber = packageInfo.buildNumber;
-        });
-      }
-    } catch (_) {}
   }
 
   @override

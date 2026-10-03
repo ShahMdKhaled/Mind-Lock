@@ -16,6 +16,8 @@ import '../../settings/view/app_time_breaks_screen.dart';
 
 import '../../settings/view/daily_scroll_limit_screen.dart';
 
+import 'package:in_app_update/in_app_update.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -32,6 +34,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       context.read<HomeViewModel>().loadData();
     });
+    _checkForUpdate();
+  }
+
+  Future<void> _checkForUpdate() async {
+    try {
+      final info = await InAppUpdate.checkForUpdate();
+      if (info.updateAvailability == UpdateAvailability.updateAvailable) {
+        if (info.immediateUpdateAllowed) {
+          await InAppUpdate.performImmediateUpdate();
+        } else if (info.flexibleUpdateAllowed) {
+          await InAppUpdate.startFlexibleUpdate();
+          await InAppUpdate.completeFlexibleUpdate();
+        }
+      }
+    } catch (e) {
+      // Ignore if update check fails (e.g. not installed via Play Store)
+    }
   }
 
   @override

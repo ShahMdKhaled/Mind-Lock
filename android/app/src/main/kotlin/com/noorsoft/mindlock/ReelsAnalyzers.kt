@@ -104,6 +104,14 @@ class FacebookMainAnalyzer : IReelsAnalyzer {
                     result.rightSideClickablesList.add(Rect(rect))
                 }
             }
+            
+            if (node.isClickable) {
+                // The user specifically requested: button size max 30 dp for Facebook Main
+                val maxPx = 30 * result.density
+                if (rect.width() <= maxPx && rect.height() <= maxPx) {
+                    result.facebookSmallButtonsList.add(Rect(rect))
+                }
+            }
         }
     }
 
@@ -113,18 +121,30 @@ class FacebookMainAnalyzer : IReelsAnalyzer {
                            (if (result.hasShare) 1 else 0) + 
                            result.numericStrings.size
                            
+        var smallVerticalSeparationCount = 0
+        if (result.facebookSmallButtonsList.size >= 4) {
+            val list = result.facebookSmallButtonsList
+            list.sortBy { it.top }
+            for (i in 0 until list.size - 1) {
+                val diffY = Math.abs(list[i].centerY() - list[i+1].centerY())
+                val diffX = Math.abs(list[i].centerX() - list[i+1].centerX())
+                if (diffY > 40 && diffX < 200) smallVerticalSeparationCount++
+            }
+        }
+                           
         if (result.isShoppingPost || result.isExcludedPost) {
             // User requested: If "shop", "shop now", "remove", "add friend", "download", "install" is present, DO NOT block
             result.isReel = false
             result.rightSideClickablesList.clear()
-        } else if (fbFoundCount >= 3) {
-            // If it finds 3 or 4, it is a Reel
+        } else if (smallVerticalSeparationCount >= 3) {
+            // 4 buttons vertically stacked = 3 separations. Max size 30dp.
             result.isReel = true
-        } else if (fbFoundCount == 1 || fbFoundCount == 2) {
-            // User requested: If it finds exactly 1 or 2, it should NOT block
-            result.isReel = false
-            result.rightSideClickablesList.clear()
+        } else if (fbFoundCount >= 2) {
+            // If it finds at least 2 Reel indicators on the right side, it's a Reel
+            result.isReel = true
         }
+        // Note: Removed the condition that cleared the generic list if count was 1 or 2. 
+        // This allows the generic vertical stack detector to catch Reels if text-based detection misses.
     }
 }
 
@@ -150,7 +170,29 @@ class FacebookLiteAnalyzer : IReelsAnalyzer {
             // The generic vertical stack detector in MindLockAccessibilityService will handle the '3 buttons' logic
             if (node.isClickable) {
                 result.rightSideClickablesList.add(Rect(rect))
+                
+                // Increased to 55dp because accessibility touch targets are often 48dp or larger
+                val maxPx = 55 * result.density
+                if (rect.width() <= maxPx && rect.height() <= maxPx) {
+                    result.facebookSmallButtonsList.add(Rect(rect))
+                }
             }
+        }
+    }
+    
+    override fun postAnalyze(result: MindLockAccessibilityService.UIAnalysisResult) {
+        var smallVerticalSeparationCount = 0
+        if (result.facebookSmallButtonsList.size >= 4) {
+            val list = result.facebookSmallButtonsList
+            list.sortBy { it.top }
+            for (i in 0 until list.size - 1) {
+                val diffY = Math.abs(list[i].centerY() - list[i+1].centerY())
+                val diffX = Math.abs(list[i].centerX() - list[i+1].centerX())
+                if (diffY > 40 && diffX < 200) smallVerticalSeparationCount++
+            }
+        }
+        if (smallVerticalSeparationCount >= 3) {
+            result.isReel = true
         }
     }
     

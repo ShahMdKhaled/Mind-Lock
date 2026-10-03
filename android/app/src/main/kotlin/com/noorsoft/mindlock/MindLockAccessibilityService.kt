@@ -348,6 +348,9 @@ class MindLockAccessibilityService : AccessibilityService() {
         var numericStrings = mutableSetOf<String>()
         var isShoppingPost = false
         var isExcludedPost = false
+        
+        var density: Float = 1.0f
+        var facebookSmallButtonsList = mutableListOf<android.graphics.Rect>()
     }
 
     private val analyzers = mapOf(
@@ -366,6 +369,7 @@ class MindLockAccessibilityService : AccessibilityService() {
         val displayMetrics = resources.displayMetrics
         val screenWidth = displayMetrics.widthPixels
         val screenHeight = displayMetrics.heightPixels
+        result.density = displayMetrics.density
 
         val isLite = packageName.lowercase().contains("lite")
         val analyzer = analyzers.entries.find { packageName.contains(it.key) }?.value
@@ -495,12 +499,8 @@ class MindLockAccessibilityService : AccessibilityService() {
         Log.d("MindLock", "Blocking Reels Action")
         
         if (aggressiveBlock) {
-            // Aggressive mode for TikTok: Home action + multiple back actions to ensure it fully closes
+            // Smooth mode for TikTok: Direct Home action to ensure it fully closes without jitter
             performGlobalAction(GLOBAL_ACTION_HOME)
-            performGlobalAction(GLOBAL_ACTION_BACK)
-            handler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 100)
-            handler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 250)
-            handler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 400)
         } else {
             // 1. First perform the back action
             performGlobalAction(GLOBAL_ACTION_BACK)
