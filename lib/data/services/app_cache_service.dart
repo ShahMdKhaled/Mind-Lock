@@ -4,6 +4,7 @@ import 'package:path/path.dart';
 import 'package:installed_apps/installed_apps.dart';
 import 'package:installed_apps/app_info.dart';
 
+// Service to manage and cache installed app metadata (like icons and names) to a local SQLite database
 class AppCacheService {
   static AppCacheService? _instance;
   static AppCacheService get instance => _instance ??= AppCacheService._();
@@ -12,6 +13,7 @@ class AppCacheService {
   Database? _db;
   final Map<String, AppInfo> _memoryCache = {};
 
+  // Initializes the local SQLite database for caching app info
   Future<void> init() async {
     if (_db != null) return;
 
@@ -36,6 +38,7 @@ class AppCacheService {
     cleanUpCache();
   }
 
+  // Fetches app info from cache if available, otherwise queries the OS and saves it
   Future<AppInfo?> getAppInfo(String packageName) async {
     if (_memoryCache.containsKey(packageName)) {
       return _memoryCache[packageName];

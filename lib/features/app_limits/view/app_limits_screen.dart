@@ -6,6 +6,7 @@ import '../../../core/constants.dart';
 import '../../../shared/widgets/strict_mode_dialog.dart';
 import '../viewmodel/app_limits_viewmodel.dart';
 
+// UI Screen for viewing and setting daily time limits on individual apps
 class AppLimitsScreen extends StatelessWidget {
   const AppLimitsScreen({super.key});
 
@@ -149,13 +150,13 @@ class _AppLimitsScreenContentState extends State<_AppLimitsScreenContent> {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: enabled
-              ? AppColors.warning.withValues(alpha: 0.5)
+              ? AppColors.primary.withValues(alpha: 0.5)
               : AppColors.cardBorder,
         ),
         boxShadow: [
           if (enabled)
             BoxShadow(
-              color: AppColors.warning.withValues(alpha: 0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               blurRadius: 20,
               spreadRadius: 5,
             )
@@ -217,7 +218,7 @@ class _AppLimitsScreenContentState extends State<_AppLimitsScreenContent> {
                 vm.toggleMasterShield(v);
               }
             },
-            activeTrackColor: AppColors.warning,
+            activeTrackColor: AppColors.primary,
           ),
         ],
       ),
@@ -287,11 +288,11 @@ class _AppLimitsScreenContentState extends State<_AppLimitsScreenContent> {
             : Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withValues(alpha: 0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child:
-                    const Icon(Icons.apps, color: AppColors.warning, size: 24),
+                    const Icon(Icons.apps, color: AppColors.primary, size: 24),
               ),
         title: Text(
           appName,

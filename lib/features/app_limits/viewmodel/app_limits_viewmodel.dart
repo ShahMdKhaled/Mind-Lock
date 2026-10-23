@@ -8,6 +8,7 @@ import '../../../data/services/usage_data_service.dart';
 import '../../../data/services/app_cache_service.dart' as import_app_cache;
 import 'package:permission_handler/permission_handler.dart';
 
+// ViewModel to manage daily time limits and restrictions for individual apps
 class AppLimitsViewModel extends ChangeNotifier {
   final SettingsRepository _settingsRepo;
 
@@ -32,6 +33,7 @@ class AppLimitsViewModel extends ChangeNotifier {
 
   final Map<String, AppInfo> _limitedAppsCache = {};
 
+  // Loads user settings and caches info for currently limited apps for instant UI rendering
   Future<void> loadSettings() async {
     _isLoading = true;
     notifyListeners();
@@ -65,6 +67,7 @@ class AppLimitsViewModel extends ChangeNotifier {
     }
   }
 
+  // Loads all installed apps on the device, prioritizing user apps and those with usage history
   Future<void> loadInstalledApps() async {
     _isAppsLoading = true;
     notifyListeners();

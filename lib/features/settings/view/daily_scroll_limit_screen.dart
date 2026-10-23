@@ -4,6 +4,7 @@ import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import '../viewmodel/settings_viewmodel.dart';
 
+// UI Screen for setting a maximum daily time limit for scrolling social media apps
 class DailyScrollLimitScreen extends StatelessWidget {
   const DailyScrollLimitScreen({super.key});
 
@@ -31,13 +32,13 @@ class DailyScrollLimitScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                     color: settings.scrollLimitEnabled
-                        ? AppColors.warning.withValues(alpha: 0.5)
+                        ? AppColors.primary.withValues(alpha: 0.5)
                         : AppColors.cardBorder,
                   ),
                   boxShadow: [
                     if (settings.scrollLimitEnabled)
                       BoxShadow(
-                          color: AppColors.warning.withValues(alpha: 0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           blurRadius: 20,
                           spreadRadius: 5)
                   ],
@@ -67,7 +68,7 @@ class DailyScrollLimitScreen extends StatelessWidget {
                         Switch.adaptive(
                           value: settings.scrollLimitEnabled,
                           onChanged: (v) => vm.toggleScrollLimit(v),
-                          activeTrackColor: AppColors.warning,
+                          activeTrackColor: AppColors.primary,
                         ),
                       ],
                     ),
@@ -124,12 +125,14 @@ class DailyScrollLimitScreen extends StatelessWidget {
                 'What it does',
                 'Once enabled, this tracks your continuous scrolling across social media. When the limit is reached, it blocks further scrolling to help you regain focus.',
                 Icons.hourglass_bottom,
+                iconColor: AppColors.primary,
               ),
               const SizedBox(height: 12),
               _buildInfoCard(
                 'Healthy Habits',
                 'Setting a daily limit for scrolling helps prevent doomscrolling and improves your daily productivity.',
                 Icons.spa,
+                iconColor: AppColors.primary,
               ),
             ],
           ),
@@ -138,7 +141,7 @@ class DailyScrollLimitScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCard(String title, String desc, IconData icon) {
+  Widget _buildInfoCard(String title, String desc, IconData icon, {Color? iconColor}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -149,7 +152,7 @@ class DailyScrollLimitScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.warning, size: 24),
+          Icon(icon, color: iconColor ?? AppColors.primary, size: 24),
           const SizedBox(width: 16),
           Expanded(
             child: Column(

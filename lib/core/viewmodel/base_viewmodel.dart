@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'view_state.dart';
 
+// Base ViewModel class providing common state management and error handling logic
 abstract class BaseViewModel extends ChangeNotifier {
   ViewState _state = ViewState.idle;
   String? _errorMessage;

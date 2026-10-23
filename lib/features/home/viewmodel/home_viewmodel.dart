@@ -8,6 +8,7 @@ import '../../../data/services/study_mode_service.dart';
 import '../../../core/viewmodel/base_viewmodel.dart';
 import '../../../core/viewmodel/view_state.dart';
 
+// ViewModel for the Home Screen, aggregating app settings, usage stats, and permissions
 class HomeViewModel extends BaseViewModel {
   final SettingsRepository _settingsRepo;
   final UsageRepository _usageRepo;
@@ -33,6 +34,7 @@ class HomeViewModel extends BaseViewModel {
     loadData();
   }
 
+  // Loads all necessary data (settings, permissions, and app usage) for the dashboard
   Future<void> loadData({bool delayed = false}) async {
     if (delayed) {
       await Future.delayed(const Duration(milliseconds: 500));
@@ -48,6 +50,7 @@ class HomeViewModel extends BaseViewModel {
     }
   }
 
+  // Checks if all core permissions (Usage, Accessibility, Overlay, Notifications, DND) are granted
   Future<bool> _checkPermissions() async {
     final usage = await _permissionRepo.isUsageAccessGranted();
     final accessibility = await _permissionRepo.isAccessibilityServiceEnabled();
@@ -59,6 +62,7 @@ class HomeViewModel extends BaseViewModel {
     return usage && accessibility && overlay && notification && dnd;
   }
 
+  // Refreshes the daily usage summary for today and yesterday
   Future<void> refreshUsage() async {
     if (!_permissionsGranted) {
       if (state == ViewState.loading) setState(ViewState.idle);
@@ -72,6 +76,7 @@ class HomeViewModel extends BaseViewModel {
     notifyListeners();
   }
 
+  // Handles strict mode constraints before allowing a feature to be disabled
   Future<bool> requestDisableFeature(String feature) async {
     if (!_settings.strictModeEnabled) return true;
 
@@ -115,13 +120,21 @@ class HomeViewModel extends BaseViewModel {
     notifyListeners();
   }
 
-  Future<void> toggleUninstallProtection(bool enabled) async {
+  Future<void> toggleUninstallProtection(bool enabled, [int? durationDays]) async {
     if (!enabled) {
       final allowed = await requestDisableFeature('uninstall_protection');
       if (!allowed) return;
     }
-    _settings = _settings.copyWith(uninstallProtectionEnabled: enabled);
-    await _settingsRepo.setUninstallProtection(enabled);
+    final effectiveDays =
+        durationDays ?? _settings.uninstallProtectionDurationDays;
+    final now = DateTime.now();
+    _settings = _settings.copyWith(
+      uninstallProtectionEnabled: enabled,
+      uninstallProtectionDurationDays: effectiveDays,
+      uninstallProtectionStartDate:
+          enabled ? now : _settings.uninstallProtectionStartDate,
+    );
+    await _settingsRepo.setUninstallProtection(enabled, effectiveDays);
     notifyListeners();
   }
 

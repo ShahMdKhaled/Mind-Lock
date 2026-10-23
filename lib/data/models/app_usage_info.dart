@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+// Data model representing the usage statistics for a specific installed app
 class MindLockUsageInfo {
   final String packageName;
   final String appName;
@@ -45,6 +46,7 @@ class MindLockUsageInfo {
   }
 }
 
+// Data model representing a summary of the user's daily device usage
 class DailyUsageSummary {
   final DateTime date;
   final Duration totalSocialMedia;

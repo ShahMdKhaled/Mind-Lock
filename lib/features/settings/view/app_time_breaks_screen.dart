@@ -4,6 +4,7 @@ import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import '../viewmodel/settings_viewmodel.dart';
 
+// UI Screen for configuring mandatory screen breaks and rest intervals
 class AppTimeBreaksScreen extends StatelessWidget {
   const AppTimeBreaksScreen({super.key});
 
@@ -124,12 +125,14 @@ class AppTimeBreaksScreen extends StatelessWidget {
                 'What it does',
                 'Once enabled, this tracks your continuous screen usage. After the selected interval is reached, a 10-second break overlay pops up, encouraging you to rest your eyes.',
                 Icons.av_timer,
+                iconColor: AppColors.primary,
               ),
               const SizedBox(height: 12),
               _buildInfoCard(
                 'Healthy Habits',
                 'Regular short breaks reduce eye strain, prevent headaches, and help you maintain better cognitive focus during work or study sessions.',
                 Icons.spa,
+                iconColor: AppColors.primary,
               ),
             ],
           ),
@@ -138,7 +141,7 @@ class AppTimeBreaksScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCard(String title, String desc, IconData icon) {
+  Widget _buildInfoCard(String title, String desc, IconData icon, {Color? iconColor}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -149,7 +152,7 @@ class AppTimeBreaksScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.primary, size: 24),
+          Icon(icon, color: iconColor ?? AppColors.primary, size: 24),
           const SizedBox(width: 16),
           Expanded(
             child: Column(

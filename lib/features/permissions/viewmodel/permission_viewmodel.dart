@@ -4,9 +4,11 @@ import '../../../data/repositories/permission_repository.dart';
 import '../../../data/services/study_mode_service.dart';
 import '../../../core/di/service_locator.dart';
 
+// Main ViewModel to handle and track all system permissions
 class PermissionViewModel extends BaseViewModel {
   final PermissionRepository _permissionRepo;
 
+  // Variables to track the current state of each required permission
   bool _isUsageGranted = false;
   bool _isAccessibilityEnabled = false;
   bool _isOverlayGranted = false;
@@ -22,18 +24,21 @@ class PermissionViewModel extends BaseViewModel {
   bool get isDndGranted => _isDndGranted;
   bool get isBatteryIgnored => _isBatteryIgnored;
   bool get isDeviceAdminEnabled => _isDeviceAdminEnabled;
+  
+  // Checks if all the mandatory permissions for the app are granted
   bool get allGranted =>
       _isUsageGranted &&
       _isAccessibilityEnabled &&
       _isOverlayGranted &&
-      _isDndGranted &&
       _isBatteryIgnored;
 
+  // Checks all permissions immediately upon ViewModel initialization
   PermissionViewModel({PermissionRepository? permissionRepo})
       : _permissionRepo = permissionRepo ?? getIt<PermissionRepository>() {
     checkAll();
   }
 
+  // Fetches current permission states from the device system and updates the UI
   Future<void> checkAll({bool delayed = false}) async {
     if (delayed) {
       await Future.delayed(const Duration(milliseconds: 500));
@@ -57,29 +62,35 @@ class PermissionViewModel extends BaseViewModel {
     }
   }
 
+  // Requests App Usage Data access permission from system settings
   Future<void> requestUsage() async {
     await _permissionRepo.openUsageAccessSettings();
   }
 
+  // Requests Accessibility Service permission to read screen content and block apps
   Future<void> requestAccessibility() async {
     await _permissionRepo.openAccessibilitySettings();
   }
 
+  // Requests Draw over other apps (Overlay) permission for blocking screens
   Future<void> requestOverlay() async {
     await _permissionRepo.requestOverlayPermission();
     await checkAll(delayed: true);
   }
 
+  // Requests permission to post warning notifications to the user
   Future<void> requestNotification() async {
     await _permissionRepo.requestNotificationPermission();
     await checkAll(delayed: true);
   }
 
+  // Requests Do Not Disturb (Silent) access for Study Mode
   Future<void> requestDnd() async {
     await getIt<StudyModeService>().requestNotificationPolicyPermission();
     await checkAll(delayed: true);
   }
 
+  // Requests to ignore battery optimization so the app runs reliably in the background
   Future<void> requestBatteryIgnore() async {
     await _permissionRepo.requestIgnoreBatteryOptimization();
 
@@ -95,6 +106,7 @@ class PermissionViewModel extends BaseViewModel {
     await checkAll();
   }
 
+  // Requests Device Admin permission for uninstall protection
   Future<void> requestDeviceAdmin() async {
     await _permissionRepo.requestDeviceAdmin();
     await Future.delayed(const Duration(seconds: 2));

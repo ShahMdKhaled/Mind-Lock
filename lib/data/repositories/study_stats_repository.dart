@@ -1,11 +1,13 @@
 import 'dart:convert';
 import '../services/local_storage_service.dart';
 
+// Repository for storing and retrieving user's daily study mode focus statistics
 class StudyStatsRepository {
   final LocalStorageService _storageService = LocalStorageService.instance;
 
   static const String _keyDailyStats = 'study_daily_stats_json';
 
+  // Retrieves the complete history of daily study times recorded in local storage
   Future<Map<String, int>> getDailyStats() async {
     await _storageService.init();
     final jsonStr = _storageService.get(_keyDailyStats, null) as String?;
@@ -19,6 +21,7 @@ class StudyStatsRepository {
     }
   }
 
+  // Saves a completed study session's duration (in minutes) to today's log
   Future<void> saveSession(int minutes) async {
     final stats = await getDailyStats();
     final today = _getDateString(DateTime.now());

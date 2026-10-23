@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+// Service to check and request various Android system permissions via MethodChannels and PermissionHandler
 class PermissionService {
   static const MethodChannel _channel =
       MethodChannel('com.noorsoft.mindlock/permissions');

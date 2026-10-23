@@ -18,6 +18,7 @@ import '../../settings/view/daily_scroll_limit_screen.dart';
 
 import 'package:in_app_update/in_app_update.dart';
 
+// Main Dashboard UI Screen providing quick access to features, stats, and active status
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -236,12 +237,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: _buildToggleCard(
                     'Reels Blocker',
                     settings.reelsBlockerEnabled,
-                    AppColors.danger,
                     Icons.block)),
             const SizedBox(width: 16),
             Expanded(
                 child: _buildToggleCard('Study Mode', studyVm.isActive,
-                    AppColors.secondary, Icons.school)),
+                    Icons.school)),
           ],
         ),
         const SizedBox(height: 16),
@@ -251,7 +251,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: _buildToggleCard(
                   'Uninstall Protect',
                   settings.uninstallProtectionEnabled,
-                  AppColors.primary,
                   Icons.security),
             ),
             const SizedBox(width: 16),
@@ -259,7 +258,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: _buildToggleCard(
                   'App Use Limit',
                   settings.appLimitsEnabled,
-                  AppColors.warning,
                   Icons.hourglass_top),
             ),
           ],
@@ -269,12 +267,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             Expanded(
               child: _buildToggleCard('Strict Mode', settings.strictModeEnabled,
-                  AppColors.warning, Icons.lock_clock),
+                  Icons.lock_clock),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: _buildToggleCard('App Time Breaks', settings.breakEnabled,
-                  AppColors.primary, Icons.coffee),
+                  Icons.coffee),
             ),
           ],
         ),
@@ -283,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildToggleCard(
-      String title, bool value, Color accent, IconData icon) {
+      String title, bool value, IconData icon) {
     return GestureDetector(
       onTap: () async {
         if (title == 'Reels Blocker') {
@@ -325,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           borderRadius: BorderRadius.circular(AppConstants.cardRadius),
           border: Border.all(
               color:
-                  value ? accent.withValues(alpha: 0.5) : AppColors.cardBorder),
+                  value ? AppColors.success.withValues(alpha: 0.5) : AppColors.cardBorder),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icon, color: value ? accent : AppColors.textMuted),
+                Icon(icon, color: AppColors.primary),
                 const Icon(Icons.arrow_forward_ios,
                     size: 12, color: AppColors.textMuted),
               ],
@@ -348,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const SizedBox(height: 4),
             Text(value ? 'Active' : 'Disabled',
                 style: TextStyle(
-                    color: value ? accent : AppColors.textMuted,
+                    color: value ? AppColors.success : AppColors.textMuted,
                     fontSize: 12,
                     fontWeight: FontWeight.w600)),
           ],
@@ -371,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ? '${settings.scrollLimitMinutes}m limit set for today'
               : 'Not enabled',
           Icons.hourglass_bottom,
-          AppColors.warning,
+          AppColors.primary,
           () {
             Navigator.push(
               context,

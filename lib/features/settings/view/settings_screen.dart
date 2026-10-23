@@ -8,7 +8,9 @@ import '../viewmodel/settings_viewmodel.dart';
 import '../../reels_blocker/view/reels_blocker_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:app_settings/app_settings.dart';
+import 'uninstall_protection_screen.dart';
 
+// UI screen for managing app settings and configurations
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -16,11 +18,13 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
+// State handler for the Settings Screen, listening to app lifecycle changes
 class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
   final String _version = AppConstants.appVersion;
   final String _buildNumber = AppConstants.appBuildNumber;
 
+  // Initializes the screen state and registers the lifecycle observer
   @override
   void initState() {
     super.initState();
@@ -32,12 +36,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     });
   }
 
+  // Cleans up the lifecycle observer when the screen is destroyed
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
+  // Listens to app lifecycle state changes to refresh permission checks
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
@@ -80,9 +86,19 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             _buildConfigurableSettingTile(
               title: 'Uninstall Protection',
-              subtitle: 'Prevent app removal for 30 days',
+              subtitle: settings.uninstallProtectionEnabled
+                  ? (settings.isUninstallProtectionActive
+                      ? 'Locked for ${settings.uninstallProtectionDurationDays} days (${settings.uninstallProtectionRemaining.inDays}d left)'
+                      : 'Protection active (lock period expired)')
+                  : 'Set custom lock days & prevent uninstallation',
               icon: Icons.security,
               value: settings.uninstallProtectionEnabled,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const UninstallProtectionScreen(),
+                ),
+              ),
               onChanged: (v) {
                 if (v && !_checkPermissions(vm)) return;
                 if (!v && settings.uninstallProtectionEnabled) {
@@ -90,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     final remaining = settings.uninstallProtectionRemaining;
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text(
-                          'Locked for 30 days! ${remaining.inDays} days remaining.'),
+                          'Locked for ${settings.uninstallProtectionDurationDays} days! ${remaining.inDays} days remaining.'),
                       backgroundColor: AppColors.danger,
                     ));
                     return;
@@ -108,8 +124,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                   } else {
                     vm.toggleUninstallProtection(false);
                   }
-                } else {
-                  vm.toggleUninstallProtection(v);
+                } else if (v) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const UninstallProtectionScreen(),
+                    ),
+                  );
                 }
               },
               children: [],
@@ -299,6 +320,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     required bool value,
     required Function(bool) onChanged,
     required List<Widget> children,
+    VoidCallback? onTap,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -309,6 +331,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       child: Column(
         children: [
           ListTile(
+            onTap: onTap,
             leading: Icon(icon, color: AppColors.primary),
             title: Text(title,
                 style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -345,8 +368,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(value,
-                style: const TextStyle(
-                    color: AppColors.primary, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: value.toLowerCase() == 'active' ? AppColors.success : AppColors.textMuted, 
+                    fontWeight: FontWeight.bold)),
             const SizedBox(width: 8),
             const Icon(Icons.chevron_right, color: AppColors.textMuted),
           ],
@@ -439,7 +463,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 children: [
                   Icon(
                     isGranted ? Icons.check_circle : Icons.cancel,
-                    color: isGranted ? AppColors.success : AppColors.textMuted,
+                    color: isGranted ? AppColors.success : AppColors.warning,
                     size: 14,
                   ),
                   const SizedBox(width: 6),
@@ -447,7 +471,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     isGranted ? 'Granted' : 'Missing',
                     style: TextStyle(
                       color:
-                          isGranted ? AppColors.success : AppColors.textMuted,
+                          isGranted ? AppColors.success : AppColors.warning,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),

@@ -268,13 +268,65 @@ class TikTokAnalyzer : IReelsAnalyzer {
 // ==========================================
 class YouTubeAnalyzer : IReelsAnalyzer {
     override fun analyze(node: AccessibilityNodeInfo, rect: Rect, text: String, desc: String, result: MindLockAccessibilityService.UIAnalysisResult, screenWidth: Int, screenHeight: Int) {
-        if (desc.contains("Shorts player", true) || text.contains("Remix", true) || desc.contains("Remix", true)) {
+        val cleanText = text.trim()
+        val cleanDesc = desc.trim()
+
+        // 1. Direct Shorts player / Remix / Shorts indicators
+        if (cleanDesc.contains("Shorts player", true) || 
+            cleanText.contains("Remix", true) || cleanDesc.contains("Remix", true) ||
+            cleanDesc.contains("YouTube Shorts", true) || cleanDesc.contains("Shorts video", true)) {
             result.isYouTubeShorts = true
         }
 
-        if (rect.left > screenWidth * 0.8 && rect.top > screenHeight * 0.2) {
-            if (desc.contains("Like", true) || desc.contains("Dislike", true) || desc.contains("Comments", true)) {
+        // 2. Scan right side of screen where Shorts vertical action buttons are located
+        // Right > 75% width, between 15% and 92% screen height
+        if (rect.left > screenWidth * 0.75 && rect.top > screenHeight * 0.15 && rect.bottom < screenHeight * 0.92) {
+            // Supports new Heart/Love button alongside classic Like button (Bengali & English)
+            val isLikeOrLove = cleanDesc.contains("Like", true) || cleanText.contains("Like", true) ||
+                               cleanDesc.contains("Love", true) || cleanText.contains("Love", true) ||
+                               cleanDesc.contains("Heart", true) || cleanText.contains("Heart", true) ||
+                               cleanDesc.contains("ভালোবাসা", true) || cleanText.contains("ভালোবাসা", true) ||
+                               cleanDesc.contains("পছন্দ", true) || cleanText.contains("পছন্দ", true)
+            
+            val isDislike = cleanDesc.contains("Dislike", true) || cleanText.contains("Dislike", true) ||
+                            cleanDesc.contains("অপছন্দ", true) || cleanText.contains("অপছন্দ", true)
+            
+            val isComment = cleanDesc.contains("Comment", true) || cleanText.contains("Comment", true) ||
+                            cleanDesc.contains("মন্তব্য", true) || cleanText.contains("মন্তব্য", true)
+            
+            val isShare = cleanDesc.contains("Share", true) || cleanText.contains("Share", true) ||
+                          cleanDesc.contains("শেয়ার", true) || cleanText.contains("শেয়ার", true)
+            
+            val isRemix = cleanDesc.contains("Remix", true) || cleanText.contains("Remix", true)
+
+            if (isLikeOrLove || isDislike || isComment || isShare || isRemix) {
                 result.rightSideClickablesList.add(Rect(rect))
+            } else if (node.isClickable && rect.width() < screenWidth * 0.35) {
+                // Fallback for unlabeled/icon-only buttons (like new heart icon) or numeric stats on right side
+                val isUnnamedIcon = cleanText.isEmpty() && cleanDesc.isEmpty()
+                val isNumeric = cleanText.matches(Regex("^[0-9.,]+[kKmM]?$")) || cleanDesc.matches(Regex("^[0-9.,]+[kKmM]?$"))
+                if (isUnnamedIcon || isNumeric) {
+                    result.rightSideClickablesList.add(Rect(rect))
+                }
+            }
+        }
+    }
+
+    override fun postAnalyze(result: MindLockAccessibilityService.UIAnalysisResult) {
+        // If 2 or more right-side buttons are vertically aligned, confirm Shorts
+        if (result.rightSideClickablesList.size >= 2) {
+            val list = result.rightSideClickablesList
+            list.sortBy { it.top }
+            var verticalSeparationCount = 0
+            for (i in 0 until list.size - 1) {
+                val diffY = Math.abs(list[i].centerY() - list[i+1].centerY())
+                val diffX = Math.abs(list[i].centerX() - list[i+1].centerX())
+                if (diffY > 60 && diffX < 200) verticalSeparationCount++
+            }
+            if (verticalSeparationCount >= 1 && list.size >= 3) {
+                result.isYouTubeShorts = true
+            } else if (verticalSeparationCount >= 2) {
+                result.isYouTubeShorts = true
             }
         }
     }

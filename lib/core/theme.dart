@@ -1,28 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
   AppColors._();
 
   static const Color primary = Color(0xFF6C63FF);
-  static const Color primaryLight = Color(0xFF9B94FF);
-  static const Color primaryDark = Color(0xFF4A42D6);
+  static const Color primaryLight = Color(0xFF817AFF);
+  static const Color primaryDark = Color(0xFF5148D8);
 
-  static const Color secondary = Color(0xFF00D4AA);
+  static const Color secondary = Color(0xFF35D39A); // Using Success as secondary if needed
   static const Color secondaryDark = Color(0xFF00A885);
 
-  static const Color danger = Color(0xFFFF4757);
-  static const Color warning = Color(0xFFFFB92E);
-  static const Color success = Color(0xFF2ED573);
+  static const Color danger = Color(0xFFFF4D6D);
+  static const Color warning = Color(0xFFFFB52E);
+  static const Color success = Color(0xFF35D39A);
 
-  static const Color background = Color(0xFF0A0A1A);
-  static const Color surface = Color(0xFF12122A);
-  static const Color surfaceVariant = Color(0xFF1A1A35);
-  static const Color card = Color(0xFF1E1E3F);
-  static const Color cardBorder = Color(0xFF2A2A50);
+  static const Color background = Color(0xFF0B0A1A);
+  static const Color surface = Color(0xFF14142A);
+  static const Color surfaceVariant = Color(0xFF191936);
+  static const Color card = Color(0xFF14142A);
+  static const Color cardBorder = Color(0xFF292850);
 
-  static const Color textPrimary = Color(0xFFF0F0FF);
-  static const Color textSecondary = Color(0xFFB0B0D0);
-  static const Color textMuted = Color(0xFF6060A0);
+  static const Color textPrimary = Color(0xFFF2F1FF);
+  static const Color textSecondary = Color(0xFFAAA8C7);
+  static const Color textMuted = Color(0xFF68668A);
 
   static final Color cardShadow = Colors.black.withValues(alpha: 0.05);
   static final Color primaryShadow = primary.withValues(alpha: 0.3);
@@ -30,25 +31,25 @@ class AppColors {
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF6C63FF), Color(0xFF4A42D6)],
+    colors: [Color(0xFF6C63FF), Color(0xFF5148D8)],
   );
 
   static const LinearGradient reelsGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFFF4757), Color(0xFFFF6B81)],
+    colors: [Color(0xFFFF4D6D), Color(0xFFFF6B81)], // Updated to new danger
   );
 
   static const LinearGradient studyGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF00D4AA), Color(0xFF00A885)],
+    colors: [Color(0xFF35D39A), Color(0xFF00A885)], // Updated to new secondary
   );
 
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF0A0A1A), Color(0xFF0D0D25)],
+    colors: [Color(0xFF0B0A1A), Color(0xFF0D0D25)], // Updated to new background
   );
 
   static const RadialGradient glowGradient = RadialGradient(
@@ -59,7 +60,7 @@ class AppColors {
 
 class AppTheme {
   static ThemeData get dark {
-    return ThemeData(
+    final base = ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.background,
@@ -73,51 +74,53 @@ class AppTheme {
         onSurface: AppColors.textPrimary,
         onError: Colors.white,
       ),
-      fontFamily: 'Outfit',
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
+    );
+
+    return base.copyWith(
+      textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
+        displayLarge: const TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
             letterSpacing: -0.5),
-        displayMedium: TextStyle(
+        displayMedium: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
             letterSpacing: -0.3),
-        headlineLarge: TextStyle(
+        headlineLarge: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary),
-        headlineMedium: TextStyle(
+        headlineMedium: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary),
-        headlineSmall: TextStyle(
+        headlineSmall: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary),
-        titleLarge: TextStyle(
+        titleLarge: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary),
-        titleMedium: TextStyle(
+        titleMedium: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: AppColors.textSecondary),
-        bodyLarge: TextStyle(
+        bodyLarge: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w400,
             color: AppColors.textPrimary),
-        bodyMedium: TextStyle(
+        bodyMedium: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w400,
             color: AppColors.textSecondary),
-        bodySmall: TextStyle(
+        bodySmall: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w400,
             color: AppColors.textMuted),
-        labelLarge: TextStyle(
+        labelLarge: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary,
@@ -129,7 +132,6 @@ class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
-            fontFamily: 'Outfit',
             fontSize: 22,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary),
@@ -145,11 +147,15 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return Colors.white;
-          return AppColors.textMuted;
+          return const Color(0xFF77758F);
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return AppColors.primary;
-          return AppColors.surfaceVariant;
+          return const Color(0xFF1B1A30);
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return Colors.transparent;
+          return const Color(0xFF77758F);
         }),
       ),
       sliderTheme: const SliderThemeData(
@@ -160,18 +166,16 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.2),
+        indicatorColor: const Color(0xFF211F4A),
         surfaceTintColor: Colors.transparent,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return const TextStyle(
-                fontFamily: 'Outfit',
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: AppColors.primary);
           }
           return const TextStyle(
-              fontFamily: 'Outfit',
               fontSize: 11,
               fontWeight: FontWeight.w400,
               color: AppColors.textMuted);
@@ -199,9 +203,9 @@ class AppTheme {
             borderSide: BorderSide(
                 color: AppColors.primary.withValues(alpha: 0.5), width: 2)),
         labelStyle: const TextStyle(
-            color: AppColors.textSecondary, fontFamily: 'Outfit'),
+            color: AppColors.textSecondary),
         hintStyle:
-            const TextStyle(color: AppColors.textMuted, fontFamily: 'Outfit'),
+            const TextStyle(color: AppColors.textMuted),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -212,19 +216,18 @@ class AppTheme {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           textStyle: const TextStyle(
-              fontFamily: 'Outfit', fontSize: 16, fontWeight: FontWeight.w600),
+              fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         titleTextStyle: const TextStyle(
-            fontFamily: 'Outfit',
             fontSize: 20,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary),
         contentTextStyle: const TextStyle(
-            fontFamily: 'Outfit', fontSize: 14, color: AppColors.textSecondary),
+            fontSize: 14, color: AppColors.textSecondary),
       ),
     );
   }

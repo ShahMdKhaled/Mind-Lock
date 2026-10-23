@@ -5,6 +5,7 @@ import '../../../core/constants.dart';
 import '../viewmodel/permission_viewmodel.dart';
 import 'package:app_settings/app_settings.dart';
 
+// UI Screen guiding the user through granting necessary system permissions for the app to function
 class PermissionScreen extends StatefulWidget {
   const PermissionScreen({super.key});
 
@@ -107,16 +108,7 @@ class _PermissionScreenContent extends StatelessWidget {
                             'Display Over Other Apps',
                             'Look for "MindLock" in the list and allow display over other apps.',
                             vm.requestOverlay)),
-                    _buildPermissionTile(
-                        'Do Not Disturb',
-                        'Used by Study Mode.',
-                        Icons.do_not_disturb_on,
-                        vm.isDndGranted,
-                        () => _showPermissionGuide(
-                            context,
-                            'Do Not Disturb Access',
-                            'Allow MindLock to manage Do Not Disturb so Study Mode can block interruptions.',
-                            vm.requestDnd)),
+
                     _buildPermissionTile(
                         'Background Execution',
                         'Keeps accessibility service alive.',
@@ -185,12 +177,12 @@ class _PermissionScreenContent extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: (isGranted ? AppColors.success : AppColors.primary)
+            color: (isGranted ? AppColors.success : AppColors.warning)
                 .withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon,
-              color: isGranted ? AppColors.success : AppColors.primary),
+              color: isGranted ? AppColors.success : AppColors.warning),
         ),
         title: Text(title,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -201,12 +193,13 @@ class _PermissionScreenContent extends StatelessWidget {
             : ElevatedButton(
                 onPressed: onRequest,
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.warning,
+                    foregroundColor: Colors.black, // Dark text on warning background is usually better, but let's keep it white if they want, but white on amber is hard to read.
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10))),
                 child: const Text('Grant',
-                    style: TextStyle(color: Colors.white, fontSize: 12)),
+                    style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold)),
               ),
       ),
     );

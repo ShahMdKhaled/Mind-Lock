@@ -1,5 +1,6 @@
 import '../services/permission_service.dart';
 
+// Repository abstracting interactions with the PermissionService to manage Android permissions
 class PermissionRepository {
   final PermissionService _permissionService;
 

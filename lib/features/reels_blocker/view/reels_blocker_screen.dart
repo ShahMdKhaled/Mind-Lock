@@ -6,6 +6,7 @@ import '../../../shared/widgets/strict_mode_dialog.dart';
 import '../../permissions/view/permission_screen.dart';
 import '../viewmodel/reels_blocker_viewmodel.dart';
 
+// UI Screen for enabling the Reels Blocker and selecting which social media apps to restrict
 class ReelsBlockerScreen extends StatelessWidget {
   const ReelsBlockerScreen({super.key});
 

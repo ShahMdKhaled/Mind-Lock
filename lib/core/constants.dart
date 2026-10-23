@@ -18,6 +18,8 @@ class AppConstants {
       'uninstall_protection_enabled';
   static const String keyUninstallProtectionStartDate =
       'uninstall_protection_start_date';
+  static const String keyUninstallProtectionDurationDays =
+      'uninstall_protection_duration_days';
   static const String keyStudyModeEnabled = 'study_mode_enabled';
   static const String keyStudyModeStartTime = 'study_mode_start_time';
   static const String keyStudyModeEndTime = 'study_mode_end_time';

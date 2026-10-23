@@ -1,6 +1,7 @@
 import 'package:volume_controller/volume_controller.dart';
 import 'package:flutter/services.dart';
 
+// Service to control volume and Do Not Disturb (DND) features during Study Mode
 class StudyModeService {
   static StudyModeService? _instance;
   static StudyModeService get instance => _instance ??= StudyModeService._();
@@ -11,6 +12,7 @@ class StudyModeService {
   final VolumeController _volumeController = VolumeController.instance;
   double _originalVolume = 0.5;
 
+  // Activates Study Mode by muting volume and enabling DND
   Future<void> activate() async {
     try {
       _originalVolume = await _volumeController.getVolume();
@@ -28,6 +30,7 @@ class StudyModeService {
     }
   }
 
+  // Deactivates Study Mode by restoring original volume and disabling DND
   Future<void> deactivate() async {
     try {
       _volumeController.setVolume(_originalVolume);
@@ -44,6 +47,7 @@ class StudyModeService {
     }
   }
 
+  // Checks if the user has granted the Do Not Disturb (DND) access permission
   Future<bool> checkNotificationPolicyPermission() async {
     try {
       final bool? result = await _channel
@@ -54,6 +58,7 @@ class StudyModeService {
     }
   }
 
+  // Opens Android settings to request Do Not Disturb (DND) permission
   Future<void> requestNotificationPolicyPermission() async {
     try {
       await _channel.invokeMethod('openNotificationPolicySettings');

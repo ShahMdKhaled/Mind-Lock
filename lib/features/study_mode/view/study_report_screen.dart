@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../core/theme.dart';
 import '../viewmodel/study_stats_viewmodel.dart';
 
+// UI Screen displaying a comprehensive report of historical Study Mode focus sessions
 class StudyReportScreen extends StatelessWidget {
   const StudyReportScreen({super.key});
 
@@ -58,35 +59,49 @@ class _StudyReportScreenContent extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _buildCard('Today', '${vm.todayMinutes}m', AppColors.primary),
+          child: _buildCard('Today', '${vm.todayMinutes}m', isHighlight: true),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: _buildCard(
-              'Yesterday', '${vm.yesterdayMinutes}m', AppColors.surfaceVariant),
+          child: _buildCard('Yesterday', '${vm.yesterdayMinutes}m'),
         ),
       ],
     );
   }
 
-  Widget _buildCard(String title, String value, Color color) {
+  Widget _buildCard(String title, String value, {bool isHighlight = false}) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: color,
+        color: AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isHighlight
+              ? AppColors.primary.withValues(alpha: 0.5)
+              : AppColors.cardBorder,
+          width: isHighlight ? 1.5 : 1.0,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 14)),
-          const SizedBox(height: 8),
-          Text(value,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold)),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              color: isHighlight ? AppColors.primary : Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );

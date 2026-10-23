@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../core/constants.dart';
 
+// Service to manage and display local system notifications (like Study Mode and Breaks)
 class NotificationService {
   static NotificationService? _instance;
   static NotificationService get instance =>
@@ -23,6 +24,7 @@ class NotificationService {
     _isInitialized = true;
   }
 
+  // Displays a persistent ongoing notification while Study Mode is active
   Future<void> showStudyModeNotification() async {
     await init();
     const AndroidNotificationDetails androidDetails =
@@ -51,6 +53,7 @@ class NotificationService {
     await _notifications.cancel(AppConstants.notifStudyModeId);
   }
 
+  // Displays a high-priority notification alerting the user to take a break
   Future<void> showBreakNotification(int seconds) async {
     await init();
     const AndroidNotificationDetails androidDetails =

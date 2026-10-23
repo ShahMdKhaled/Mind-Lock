@@ -5,6 +5,7 @@ import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import '../viewmodel/stats_viewmodel.dart';
 
+// UI Screen for viewing detailed app usage statistics, bar charts, and most used apps
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
 
@@ -67,13 +68,14 @@ class _StatsScreenState extends State<StatsScreen> {
         final hours = weeklyData[i].totalScreen.inMinutes / 60.0;
         if (hours > maxHours) maxHours = hours;
 
-        final color = (hours > 6) ? AppColors.danger : AppColors.primary;
+        // Use single metric color as per UI guidelines
+        final color = (i == weeklyData.length - 1) ? AppColors.primaryLight : const Color(0xFF514C9A);
         barGroups.add(_makeGroupData(i, hours, color, maxHours));
       }
     } else {
       // Fallback empty state
       for (int i = 0; i < 7; i++) {
-        barGroups.add(_makeGroupData(i, 0, AppColors.primary, 2.0));
+        barGroups.add(_makeGroupData(i, 0, const Color(0xFF514C9A), 2.0));
       }
     }
 
@@ -175,9 +177,7 @@ class _StatsScreenState extends State<StatsScreen> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: isSocial
-                ? AppColors.danger.withValues(alpha: 0.3)
-                : AppColors.cardBorder),
+            color: AppColors.cardBorder),
       ),
       child: Row(
         children: [
@@ -207,7 +207,7 @@ class _StatsScreenState extends State<StatsScreen> {
                 if (isSocial)
                   const Text('Social Media',
                       style: TextStyle(
-                          color: AppColors.danger,
+                          color: AppColors.primaryLight,
                           fontSize: 10,
                           fontWeight: FontWeight.bold)),
               ],

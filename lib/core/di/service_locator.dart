@@ -9,18 +9,22 @@ import '../../data/services/permission_service.dart';
 import '../../data/services/study_mode_service.dart';
 import '../../data/services/notification_service.dart';
 
+// Global dependency injection instance (GetIt)
 final getIt = GetIt.instance;
 
+// Initializes and registers all singleton services and repositories for the app
 Future<void> setupServiceLocator() async {
   final localStorage = LocalStorageService.instance;
   await localStorage.init();
 
+  // Register Core Services
   getIt.registerSingleton<LocalStorageService>(localStorage);
   getIt.registerSingleton<UsageDataService>(UsageDataService.instance);
   getIt.registerSingleton<PermissionService>(PermissionService());
   getIt.registerSingleton<StudyModeService>(StudyModeService.instance);
   getIt.registerSingleton<NotificationService>(NotificationService.instance);
 
+  // Register Repositories
   getIt.registerSingleton<SettingsRepository>(
     SettingsRepository(localStorage: getIt<LocalStorageService>()),
   );

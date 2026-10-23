@@ -3,6 +3,7 @@ import '../../../core/viewmodel/view_state.dart';
 import '../../../data/repositories/study_stats_repository.dart';
 import '../../../core/di/service_locator.dart';
 
+// ViewModel responsible for fetching and presenting historical Study Mode statistics
 class StudyStatsViewModel extends BaseViewModel {
   final StudyStatsRepository _repository;
 
@@ -17,6 +18,7 @@ class StudyStatsViewModel extends BaseViewModel {
   StudyStatsViewModel({StudyStatsRepository? repository})
       : _repository = repository ?? getIt<StudyStatsRepository>();
 
+  // Loads today's, yesterday's, and the complete history of study minutes
   Future<void> loadStats() async {
     setState(ViewState.busy);
     try {

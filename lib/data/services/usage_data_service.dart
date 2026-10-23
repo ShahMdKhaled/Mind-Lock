@@ -6,6 +6,7 @@ import '../../core/constants.dart';
 import 'app_cache_service.dart';
 import 'package:installed_apps/installed_apps.dart' as import_installed_apps;
 
+// Service responsible for retrieving and calculating app usage durations and histories
 class UsageDataService {
   static const MethodChannel _channel =
       MethodChannel('com.noorsoft.mindlock/permissions');
@@ -43,6 +44,7 @@ class UsageDataService {
     return _validPackagesCache!;
   }
 
+  // Interrogates the Android system usage stats manager to get precise daily app usage
   Future<List<MindLockUsageInfo>> getDailyUsage({DateTime? targetDate}) async {
     try {
       DateTime now = targetDate ?? DateTime.now();

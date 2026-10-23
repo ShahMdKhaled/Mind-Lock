@@ -1,3 +1,4 @@
+// Data model representing all user-configurable settings and features in MindLock
 class AppSettings {
   bool reelsBlockerEnabled;
   List<String> reelsBlockedPackages;
@@ -10,6 +11,7 @@ class AppSettings {
   int dailyLimitMinutes;
   bool uninstallProtectionEnabled;
   DateTime? uninstallProtectionStartDate;
+  int uninstallProtectionDurationDays;
   bool studyModeEnabled;
   String? studyModeStartTime;
   String? studyModeEndTime;
@@ -34,6 +36,7 @@ class AppSettings {
     this.dailyLimitMinutes = 120,
     this.uninstallProtectionEnabled = false,
     this.uninstallProtectionStartDate,
+    this.uninstallProtectionDurationDays = 30,
     this.studyModeEnabled = false,
     this.studyModeStartTime,
     this.studyModeEndTime,
@@ -49,15 +52,23 @@ class AppSettings {
         blockedApps = blockedApps ?? [],
         appLimits = appLimits ?? {};
 
+  DateTime? get uninstallProtectionEndDate {
+    if (uninstallProtectionStartDate == null) return null;
+    return uninstallProtectionStartDate!
+        .add(Duration(days: uninstallProtectionDurationDays));
+  }
+
+  // Checks if the custom-day uninstall protection feature is currently active
   bool get isUninstallProtectionActive {
     if (!uninstallProtectionEnabled || uninstallProtectionStartDate == null) {
       return false;
     }
-    final protectionEnd =
-        uninstallProtectionStartDate!.add(const Duration(days: 30));
+    final protectionEnd = uninstallProtectionEndDate;
+    if (protectionEnd == null) return false;
     return DateTime.now().isBefore(protectionEnd);
   }
 
+  // Checks if the strict mode delay countdown is currently running
   bool get isStrictModeDelayActive {
     if (!strictModeEnabled || strictModeCountdownStart == null) return false;
     final delayEnd = strictModeCountdownStart!
@@ -80,9 +91,10 @@ class AppSettings {
   // Helper getters
   Duration get uninstallProtectionRemaining {
     if (!isUninstallProtectionActive) return Duration.zero;
-    final protectionEnd =
-        uninstallProtectionStartDate!.add(const Duration(days: 30));
-    return protectionEnd.difference(DateTime.now());
+    final protectionEnd = uninstallProtectionEndDate;
+    if (protectionEnd == null) return Duration.zero;
+    final diff = protectionEnd.difference(DateTime.now());
+    return diff.isNegative ? Duration.zero : diff;
   }
 
   AppSettings copyWith({
@@ -97,6 +109,7 @@ class AppSettings {
     int? dailyLimitMinutes,
     bool? uninstallProtectionEnabled,
     DateTime? uninstallProtectionStartDate,
+    int? uninstallProtectionDurationDays,
     bool? studyModeEnabled,
     String? studyModeStartTime,
     String? studyModeEndTime,
@@ -124,6 +137,8 @@ class AppSettings {
           uninstallProtectionEnabled ?? this.uninstallProtectionEnabled,
       uninstallProtectionStartDate:
           uninstallProtectionStartDate ?? this.uninstallProtectionStartDate,
+      uninstallProtectionDurationDays: uninstallProtectionDurationDays ??
+          this.uninstallProtectionDurationDays,
       studyModeEnabled: studyModeEnabled ?? this.studyModeEnabled,
       studyModeStartTime: studyModeStartTime ?? this.studyModeStartTime,
       studyModeEndTime: studyModeEndTime ?? this.studyModeEndTime,

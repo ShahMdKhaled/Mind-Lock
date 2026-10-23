@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../../../core/theme.dart';
 import '../viewmodel/study_mode_viewmodel.dart';
 import '../viewmodel/study_stats_viewmodel.dart';
 import '../../../data/services/permission_service.dart';
+import 'study_report_screen.dart';
 
+/// Modern, intuitive UI Screen for Study Mode.
+/// Compact and elegant timer box, presets (30m, 1h, 2h ★, 3h, 5h),
+/// customizable default duration, session extensions, and continuous overtime.
 class StudyModeScreen extends StatelessWidget {
   const StudyModeScreen({super.key});
 
@@ -19,11 +22,17 @@ class StudyModeScreen extends StatelessWidget {
 class _StudyModeScreenContent extends StatelessWidget {
   const _StudyModeScreenContent();
 
+  static const List<Map<String, dynamic>> _quickPresets = [
+    {'label': '30 min', 'minutes': 30, 'isStarred': false},
+    {'label': '1h', 'minutes': 60, 'isStarred': false},
+    {'label': '2h', 'minutes': 120, 'isStarred': true},
+    {'label': '3h', 'minutes': 180, 'isStarred': false},
+    {'label': '5h', 'minutes': 300, 'isStarred': false},
+  ];
+
   @override
   Widget build(BuildContext context) {
-    // Uses global StudyModeViewModel from app.dart
     final vm = context.watch<StudyModeViewModel>();
-    // Uses local StudyStatsViewModel
     final statsVm = context.watch<StudyStatsViewModel>();
 
     return Scaffold(
@@ -31,11 +40,22 @@ class _StudyModeScreenContent extends StatelessWidget {
         title: const Text('Study Mode'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            tooltip: 'Study Analytics & Report',
+            icon: const Icon(Icons.insights_rounded, color: AppColors.textPrimary),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const StudyReportScreen()),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: 'Refresh Stats',
+            icon: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary),
             onPressed: () {
               context.read<StudyStatsViewModel>().loadStats();
             },
-          )
+          ),
         ],
       ),
       body: Container(
@@ -43,188 +63,603 @@ class _StudyModeScreenContent extends StatelessWidget {
         height: double.infinity,
         decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Column(
             children: [
-              // TIMER SECTION
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Column(
-                  children: [
-                    CircularPercentIndicator(
-                      radius: 120.0,
-                      lineWidth: 12.0,
-                      percent: vm.progress,
-                      center: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(vm.formattedTime,
-                              style: TextStyle(
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.bold,
-                                  color: vm.overtimeSeconds > 0
-                                      ? Colors.orangeAccent
-                                      : Colors.white)),
-                          Text(
-                              vm.isActive
-                                  ? (vm.overtimeSeconds > 0
-                                      ? 'Overtime!'
-                                      : 'Focusing...')
-                                  : 'Ready?',
-                              style:
-                                  const TextStyle(color: AppColors.textMuted)),
-                        ],
-                      ),
-                      circularStrokeCap: CircularStrokeCap.round,
-                      progressColor: vm.overtimeSeconds > 0
-                          ? Colors.orangeAccent
-                          : AppColors.primary,
-                      backgroundColor: AppColors.surfaceVariant,
-                      animation: true,
-                      animateFromLastPercent: true,
-                    ),
-                    const SizedBox(height: 40),
-                    if (!vm.isActive) ...[
-                      const Text('Set Target Time',
-                          style: TextStyle(color: Colors.white, fontSize: 16)),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle_outline,
-                                color: Colors.white, size: 30),
-                            onPressed: () {
-                              if (vm.selectedMinutes > 30) {
-                                vm.setDuration(vm.selectedMinutes - 5);
-                              }
-                            },
-                          ),
-                          const SizedBox(width: 20),
-                          Text('${vm.selectedMinutes} min',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 20),
-                          IconButton(
-                            icon: const Icon(Icons.add_circle_outline,
-                                color: Colors.white, size: 30),
-                            onPressed: () =>
-                                vm.setDuration(vm.selectedMinutes + 5),
-                          ),
-                        ],
-                      ),
-                    ] else ...[
-                      const Text('Extend Time',
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 14)),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildExtendButton(context, vm, 5),
-                          const SizedBox(width: 12),
-                          _buildExtendButton(context, vm, 10),
-                          const SizedBox(width: 12),
-                          _buildExtendButton(context, vm, 20),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 40),
-                    Text('Deep Work Session',
-                        style: Theme.of(context).textTheme.headlineMedium),
-                    const SizedBox(height: 8),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 40),
-                      child: Text(
-                        'During this session, notifications and vibrations are muted. Only calls will ring.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textMuted),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    GestureDetector(
-                      onTap: () async {
-                        if (!vm.isActive) {
-                          bool granted = await vm.checkPermission();
-                          if (!granted) {
-                            if (context.mounted) {
-                              _showPermissionDialog(context);
-                            }
-                            return;
-                          }
-                        }
-                        vm.toggleSession();
+              // 1. COMPACT CIRCULAR TIMER DISPLAY
+              _buildTimerSection(context, vm),
+              const SizedBox(height: 20),
 
-                        // If we just stopped the session, reload stats to show new data
-                        if (vm.isActive == false && context.mounted) {
-                          context.read<StudyStatsViewModel>().loadStats();
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 48, vertical: 16),
-                        decoration: BoxDecoration(
-                          gradient:
-                              vm.isActive ? null : AppColors.primaryGradient,
-                          color: vm.isActive ? AppColors.surfaceVariant : null,
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: vm.isActive
-                              ? []
-                              : [
-                                  BoxShadow(
-                                      color: AppColors.primary
-                                          .withValues(alpha: 0.3),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 10))
-                                ],
-                        ),
-                        child: Text(
-                          vm.isActive ? 'Stop & Save' : 'Start Focus',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18),
-                        ),
-                      ),
-                    ),
-                  ],
+              // 2. CONTROLS SECTION (Stepper & Presets when idle, Extend options when active)
+              if (!vm.isActive) ...[
+                _buildDurationStepperCard(context, vm),
+                const SizedBox(height: 14),
+                _buildPresetChips(vm),
+              ] else ...[
+                if (vm.isOvertime) ...[
+                  _buildOvertimeBanner(vm),
+                  const SizedBox(height: 14),
+                ],
+                _buildExtendSection(context, vm),
+              ],
+              const SizedBox(height: 24),
+
+              // 3. PRIMARY ACTION BUTTON (Start / Stop & Save)
+              _buildActionButton(context, vm),
+              const SizedBox(height: 28),
+
+              // 4. FOCUS FEATURES CARD
+              _buildFeatureOverviewCard(),
+              const SizedBox(height: 20),
+
+              // 5. QUICK TODAY / YESTERDAY STATS & LINK TO REPORT
+              _buildQuickStatsSection(context, statsVm),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Compact, sleek Circular Timer matching full width of other cards with reduced height
+  Widget _buildTimerSection(BuildContext context, StudyModeViewModel vm) {
+    final Color progressColor = vm.isOvertime
+        ? AppColors.warning
+        : (vm.isActive ? AppColors.primary : AppColors.primaryLight);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: vm.isOvertime
+              ? AppColors.warning.withValues(alpha: 0.4)
+              : (vm.isActive
+                  ? AppColors.primary.withValues(alpha: 0.3)
+                  : AppColors.cardBorder),
+          width: vm.isOvertime ? 1.5 : 1.0,
+        ),
+        boxShadow: [
+          if (vm.isActive)
+            BoxShadow(
+              color: (vm.isOvertime ? AppColors.warning : AppColors.primary)
+                  .withValues(alpha: 0.15),
+              blurRadius: 20,
+              spreadRadius: 2,
+            ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Status Badge above timer
+          _buildStatusBadge(vm),
+          const SizedBox(height: 8),
+
+          // Compact circular countdown / countup indicator
+          CircularPercentIndicator(
+            radius: 76.0,
+            lineWidth: 8.0,
+            percent: vm.isOvertime ? 1.0 : vm.progress.clamp(0.0, 1.0),
+            circularStrokeCap: CircularStrokeCap.round,
+            progressColor: progressColor,
+            backgroundColor: const Color(0xFF1B1A35),
+            animation: false,
+            center: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  vm.formattedTime,
+                  style: TextStyle(
+                    fontSize: vm.formattedTime.length > 5 ? 24 : 30,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                    color: vm.isOvertime ? AppColors.warning : Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _getSubTimerText(vm),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: vm.isOvertime
+                        ? AppColors.warning.withValues(alpha: 0.9)
+                        : AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Status badge above the circular timer
+  Widget _buildStatusBadge(StudyModeViewModel vm) {
+    if (vm.isOvertime) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.warning.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.local_fire_department_rounded,
+                color: AppColors.warning, size: 14),
+            SizedBox(width: 5),
+            Text(
+              'OVERTIME COUNTING',
+              style: TextStyle(
+                color: AppColors.warning,
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (vm.isActive) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: const BoxDecoration(
+                color: AppColors.success,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Text(
+              'DEEP WORK ACTIVE',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.timer_outlined, color: AppColors.textMuted, size: 14),
+            SizedBox(width: 5),
+            Text(
+              'READY TO FOCUS',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  String _getSubTimerText(StudyModeViewModel vm) {
+    if (vm.isOvertime) {
+      return 'Total: ${vm.totalFormattedTime}';
+    } else if (vm.isActive) {
+      if (vm.selectedMinutes >= 60) {
+        int h = vm.selectedMinutes ~/ 60;
+        int m = vm.selectedMinutes % 60;
+        return 'Target: ${h}h${m > 0 ? ' ${m}m' : ''}';
+      }
+      return 'Target: ${vm.selectedMinutes}m';
+    } else {
+      if (vm.selectedMinutes >= 60) {
+        int h = vm.selectedMinutes ~/ 60;
+        int m = vm.selectedMinutes % 60;
+        return '${h}h${m > 0 ? ' ${m}m' : ''} Goal';
+      }
+      return '${vm.selectedMinutes} Min Goal';
+    }
+  }
+
+  /// Stepper card allowing users to increase or decrease duration
+  Widget _buildDurationStepperCard(
+      BuildContext context, StudyModeViewModel vm) {
+    final String durationText = _formatStepperDuration(vm.selectedMinutes);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Target Duration',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-
-              // DIVIDER
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Divider(color: AppColors.cardBorder, thickness: 1),
+              Text(
+                'Auto-saved as default',
+                style: TextStyle(
+                  color: AppColors.textMuted.withValues(alpha: 0.8),
+                  fontSize: 10,
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton.filledTonal(
+                icon: const Icon(Icons.remove_rounded, size: 20),
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.surfaceVariant,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(6),
+                ),
+                onPressed: vm.selectedMinutes > 15
+                    ? () => vm.setDuration(vm.selectedMinutes - 15)
+                    : (vm.selectedMinutes > 5
+                        ? () => vm.setDuration(5)
+                        : null),
+              ),
+              const SizedBox(width: 18),
+              Text(
+                durationText,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 18),
+              IconButton.filledTonal(
+                icon: const Icon(Icons.add_rounded, size: 20),
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.surfaceVariant,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(6),
+                ),
+                onPressed: vm.selectedMinutes < 300
+                    ? () => vm.setDuration(vm.selectedMinutes + 15)
+                    : null,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
-              // REPORT SECTION
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: statsVm.isBusy
-                    ? const Center(child: CircularProgressIndicator())
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+  String _formatStepperDuration(int minutes) {
+    if (minutes >= 60) {
+      int h = minutes ~/ 60;
+      int m = minutes % 60;
+      if (m == 0) {
+        return '$h Hour${h > 1 ? 's' : ''}';
+      }
+      return '${h}h ${m}m';
+    }
+    return '$minutes Minutes';
+  }
+
+  /// Preset chips: 30 min, 1h, 2h ★, 3h, 5h
+  Widget _buildPresetChips(StudyModeViewModel vm) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: _quickPresets.map((preset) {
+          final int mins = preset['minutes'] as int;
+          final String label = preset['label'] as String;
+          final bool isStarred = preset['isStarred'] as bool;
+          final bool isSelected = vm.selectedMinutes == mins;
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: FilterChip(
+              selected: isSelected,
+              showCheckmark: false,
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isStarred) ...[
+                    Icon(
+                      Icons.star_rounded,
+                      size: 15,
+                      color: isSelected ? Colors.white : AppColors.warning,
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : AppColors.textSecondary,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: AppColors.surfaceVariant,
+              selectedColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: isSelected
+                      ? AppColors.primary
+                      : (isStarred
+                          ? AppColors.warning.withValues(alpha: 0.6)
+                          : AppColors.cardBorder),
+                  width: isStarred ? 1.4 : 1.0,
+                ),
+              ),
+              onSelected: (_) => vm.setDuration(mins),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// Informative banner shown when target time is completed and overtime is running
+  Widget _buildOvertimeBanner(StudyModeViewModel vm) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.workspace_premium_rounded,
+              color: AppColors.warning, size: 26),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Goal Reached! Overtime Active',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Timer continues counting your focus. Extend target below or tap Stop when done.',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Session extension chips (+5m, +10m, +15m, +30m) when active
+  Widget _buildExtendSection(BuildContext context, StudyModeViewModel vm) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.more_time_rounded,
+                  color: AppColors.primary, size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Extend Focus Session',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Keep your momentum going without restarting your timer.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildExtendChip(context, vm, 5),
+              _buildExtendChip(context, vm, 10),
+              _buildExtendChip(context, vm, 15),
+              _buildExtendChip(context, vm, 30),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExtendChip(
+      BuildContext context, StudyModeViewModel vm, int minutes) {
+    return InkWell(
+      onTap: () {
+        vm.extendDuration(minutes);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.surfaceVariant,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: AppColors.primary),
+            ),
+            content: Text(
+              'Extended focus by +$minutes minutes!',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+        ),
+        child: Text(
+          '+$minutes m',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Start Focus / Stop & Save session CTA button
+  Widget _buildActionButton(BuildContext context, StudyModeViewModel vm) {
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: vm.isActive ? null : AppColors.primaryGradient,
+          color: vm.isActive ? const Color(0xFF2C1E2E) : null,
+          borderRadius: BorderRadius.circular(18),
+          border: vm.isActive
+              ? Border.all(color: AppColors.danger.withValues(alpha: 0.6))
+              : null,
+          boxShadow: [
+            if (!vm.isActive)
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.35),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+          ],
+        ),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+          ),
+          onPressed: () async {
+            if (!vm.isActive) {
+              final bool granted = await vm.checkPermission();
+              if (!granted) {
+                if (context.mounted) {
+                  _showPermissionDialog(context);
+                }
+                return;
+              }
+              await vm.toggleSession();
+            } else {
+              final int? minutesSpent = await vm.toggleSession();
+              if (context.mounted) {
+                context.read<StudyStatsViewModel>().loadStats();
+                if (minutesSpent != null && minutesSpent > 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: AppColors.surfaceVariant,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: AppColors.success),
+                      ),
+                      content: Row(
                         children: [
-                          const Text('Your Progress',
-                              style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white)),
-                          const SizedBox(height: 20),
-                          _buildSummaryCards(statsVm),
-                          const SizedBox(height: 30),
-                          const Text('Last 30 Days',
-                              style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white)),
-                          const SizedBox(height: 20),
-                          _buildChart(statsVm),
-                          const SizedBox(height: 30),
-                          _buildHistoryList(statsVm),
+                          const Icon(Icons.celebration_rounded,
+                              color: AppColors.success),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Fantastic work! You completed $minutesSpent minutes of focus time.',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
+                    ),
+                  );
+                }
+              }
+            }
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                vm.isActive
+                    ? Icons.stop_circle_rounded
+                    : Icons.play_arrow_rounded,
+                color: vm.isActive ? AppColors.danger : Colors.white,
+                size: 24,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                vm.isActive ? 'Stop & Save Session' : 'Start Focus Session',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: vm.isActive ? AppColors.danger : Colors.white,
+                ),
               ),
             ],
           ),
@@ -233,191 +668,205 @@ class _StudyModeScreenContent extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryCards(StudyStatsViewModel vm) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildCard(
-              'Today', '${vm.todayMinutes}m', AppColors.surfaceVariant,
-              isHighlight: true),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildCard(
-              'Yesterday', '${vm.yesterdayMinutes}m', AppColors.surfaceVariant),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCard(String title, String value, Color color,
-      {bool isHighlight = false}) {
+  /// Informational card outlining Study Mode behavior
+  Widget _buildFeatureOverviewCard() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: isHighlight
-            ? Border.all(
-                color: AppColors.primary.withValues(alpha: 0.5), width: 1.5)
-            : Border.all(color: AppColors.cardBorder, width: 1),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 14)),
-          const SizedBox(height: 8),
-          Text(value,
-              style: TextStyle(
-                  color: isHighlight ? AppColors.primary : Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold)),
+          const Text(
+            'Study Mode Features',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildFeatureRow(
+            Icons.do_not_disturb_on_rounded,
+            AppColors.primary,
+            'Do Not Disturb Active',
+            'Notifications and vibrations are muted to keep you in flow.',
+          ),
+          const SizedBox(height: 10),
+          _buildFeatureRow(
+            Icons.block_rounded,
+            AppColors.danger,
+            'Distraction Defense',
+            'Reels, Shorts, and blacklisted apps stay blocked during study.',
+          ),
+          const SizedBox(height: 10),
+          _buildFeatureRow(
+            Icons.update_rounded,
+            AppColors.success,
+            'Continuous Overtime',
+            'Timer never stops abruptly—counts your extra focus automatically.',
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildChart(StudyStatsViewModel vm) {
-    if (vm.dailyStats.isEmpty) {
-      return const Center(
-          child: Text('No data yet',
-              style: TextStyle(color: AppColors.textMuted)));
-    }
-
-    final sortedEntries = vm.dailyStats.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key)); // Oldest first
-
-    final List<BarChartGroupData> barGroups = [];
-    double maxVal = 0;
-
-    for (int i = 0; i < sortedEntries.length; i++) {
-      final val = sortedEntries[i].value.toDouble();
-      if (val > maxVal) maxVal = val;
-      barGroups.add(
-        BarChartGroupData(
-          x: i,
-          barRods: [
-            BarChartRodData(
-              toY: val,
-              color: AppColors.primary,
-              width: 8,
-              borderRadius: BorderRadius.circular(4),
-              backDrawRodData: BackgroundBarChartRodData(
-                  show: true,
-                  toY: maxVal == 0 ? 60 : maxVal * 1.2,
-                  color: AppColors.cardBorder.withValues(alpha: 0.3)),
-            ),
-          ],
+  Widget _buildFeatureRow(
+      IconData icon, Color color, String title, String subtitle) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 16),
         ),
-      );
-    }
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
+  /// Summary cards for Today and Yesterday with direct navigation to the full 30-day StudyReportScreen
+  Widget _buildQuickStatsSection(
+      BuildContext context, StudyStatsViewModel statsVm) {
     return Container(
-      height: 250,
-      padding: const EdgeInsets.only(top: 24, right: 16, left: 0, bottom: 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.cardBorder),
       ),
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: maxVal == 0 ? 60 : maxVal * 1.2,
-          barTouchData: BarTouchData(
-            enabled: true,
-            touchTooltipData: BarTouchTooltipData(
-              getTooltipColor: (group) => AppColors.surface,
-              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                final dateStr = sortedEntries[group.x.toInt()].key;
-                return BarTooltipItem(
-                  '$dateStr\n${rod.toY.toInt()} mins',
-                  const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                );
-              },
-            ),
-          ),
-          titlesData: FlTitlesData(
-            show: true,
-            rightTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  final index = value.toInt();
-                  // Show label every 5 days to avoid crowding
-                  if (index % 5 != 0 || index >= sortedEntries.length) {
-                    return const Text('');
-                  }
-
-                  final dateStr =
-                      sortedEntries[index].key; // Format: 2026-08-20
-                  final parts = dateStr.split('-');
-                  if (parts.length == 3) {
-                    final day = parts[2];
-                    final month = parts[1];
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text('$day/$month',
-                          style: const TextStyle(
-                              color: AppColors.textMuted, fontSize: 10)),
-                    );
-                  }
-                  return const Text('');
-                },
-                reservedSize: 28,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Focus Summary',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
               ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 40,
-                getTitlesWidget: (value, meta) {
-                  if (value == 0 || value == meta.max) return const Text('');
-                  return Text('${value.toInt()}m',
-                      style: const TextStyle(
-                          color: AppColors.textMuted, fontSize: 10));
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const StudyReportScreen()),
+                  );
                 },
+                borderRadius: BorderRadius.circular(8),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Full Report',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(Icons.arrow_forward_ios_rounded,
+                          color: AppColors.primary, size: 11),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-          borderData: FlBorderData(show: false),
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (value) => FlLine(
-                color: AppColors.cardBorder.withValues(alpha: 0.3),
-                strokeWidth: 1),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMiniStatCard(
+                  'Today',
+                  '${statsVm.todayMinutes}m',
+                  AppColors.primary,
+                  isHighlight: true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMiniStatCard(
+                  'Yesterday',
+                  '${statsVm.yesterdayMinutes}m',
+                  AppColors.surfaceVariant,
+                ),
+              ),
+            ],
           ),
-          barGroups: barGroups,
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildHistoryList(StudyStatsViewModel vm) {
-    final sortedEntries = vm.dailyStats.entries.toList()
-      ..sort((a, b) => b.key.compareTo(a.key));
-
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: sortedEntries.length,
-      itemBuilder: (context, index) {
-        final entry = sortedEntries[index];
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(entry.key, style: const TextStyle(color: Colors.white)),
-          trailing: Text('${entry.value} mins',
-              style: const TextStyle(
-                  color: AppColors.primary, fontWeight: FontWeight.bold)),
-        );
-      },
+  Widget _buildMiniStatCard(String label, String value, Color accentColor,
+      {bool isHighlight = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isHighlight
+              ? AppColors.primary.withValues(alpha: 0.4)
+              : AppColors.cardBorder,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: isHighlight ? AppColors.primary : Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -426,11 +875,12 @@ class _StudyModeScreenContent extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceVariant,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Permission Required',
-            style: TextStyle(color: Colors.white)),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: const Text(
-          'To mute notifications and vibrations during Study Mode, MindLock needs "Do Not Disturb" (Notification Policy) access. Please enable it in the system settings.',
-          style: TextStyle(color: AppColors.textMuted),
+          'To silence notifications and vibrations during Study Mode, MindLock needs "Do Not Disturb" (Notification Policy) permission. Please enable it in system settings.',
+          style: TextStyle(color: AppColors.textSecondary, height: 1.4),
         ),
         actions: [
           TextButton(
@@ -438,34 +888,20 @@ class _StudyModeScreenContent extends StatelessWidget {
             child:
                 const Text('Cancel', style: TextStyle(color: Colors.white54)),
           ),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
             onPressed: () {
               Navigator.pop(ctx);
               PermissionService().openNotificationPolicySettings();
             },
             child: const Text('Open Settings',
-                style: TextStyle(color: AppColors.primary)),
+                style: TextStyle(color: Colors.white)),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildExtendButton(
-      BuildContext context, StudyModeViewModel vm, int minutes) {
-    return InkWell(
-      onTap: () => vm.extendDuration(minutes),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceVariant,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
-        ),
-        child: Text('+$minutes min',
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }

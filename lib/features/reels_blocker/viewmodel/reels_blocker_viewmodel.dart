@@ -7,6 +7,7 @@ import '../../../core/constants.dart';
 import '../../../data/services/app_cache_service.dart' as import_app_cache;
 import 'package:permission_handler/permission_handler.dart';
 
+// ViewModel to control the Reels Blocker feature and manage its state
 class ReelsBlockerViewModel extends ChangeNotifier {
   final SettingsRepository _settingsRepo;
   final PermissionRepository _permissionRepo;
@@ -28,6 +29,7 @@ class ReelsBlockerViewModel extends ChangeNotifier {
     loadSettings();
   }
 
+  // Checks if the user has granted all necessary permissions for blocking
   Future<bool> checkPermissions() async {
     final usage = await _permissionRepo.isUsageAccessGranted();
     final access = await _permissionRepo.isAccessibilityServiceEnabled();
@@ -35,6 +37,7 @@ class ReelsBlockerViewModel extends ChangeNotifier {
     return usage && access && overlay;
   }
 
+  // Loads current settings and fetches cached app icons for blocked apps
   Future<void> loadSettings() async {
     _isLoading = true;
     notifyListeners();
@@ -55,6 +58,7 @@ class ReelsBlockerViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Handles strict mode constraints when trying to disable the blocker
   Future<bool> requestDisableFeature(String feature) async {
     if (!_settings.strictModeEnabled) return true;
 
@@ -82,6 +86,7 @@ class ReelsBlockerViewModel extends ChangeNotifier {
     return false;
   }
 
+  // Toggles the master switch for the Reels Blocker on or off
   Future<void> toggleMasterShield(bool enabled) async {
     if (!enabled) {
       final allowed = await requestDisableFeature('reels_blocker');

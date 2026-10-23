@@ -5,6 +5,7 @@ import '../../../core/constants.dart';
 import '../../../shared/widgets/strict_mode_dialog.dart';
 import '../viewmodel/settings_viewmodel.dart';
 
+// UI Screen for configuring Strict Mode, which adds a delayed countdown before disabling limits
 class StrictModeScreen extends StatelessWidget {
   const StrictModeScreen({super.key});
 
@@ -32,13 +33,13 @@ class StrictModeScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                     color: settings.strictModeEnabled
-                        ? AppColors.warning.withValues(alpha: 0.5)
+                        ? AppColors.primary.withValues(alpha: 0.5)
                         : AppColors.cardBorder,
                   ),
                   boxShadow: [
                     if (settings.strictModeEnabled)
                       BoxShadow(
-                          color: AppColors.warning.withValues(alpha: 0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           blurRadius: 20,
                           spreadRadius: 5)
                   ],
@@ -82,7 +83,7 @@ class StrictModeScreen extends StatelessWidget {
                               vm.toggleStrictMode(v);
                             }
                           },
-                          activeTrackColor: AppColors.warning,
+                          activeTrackColor: AppColors.primary,
                         ),
                       ],
                     ),
@@ -205,7 +206,7 @@ class StrictModeScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.warning, size: 24),
+          Icon(icon, color: AppColors.primary, size: 24),
           const SizedBox(width: 16),
           Expanded(
             child: Column(

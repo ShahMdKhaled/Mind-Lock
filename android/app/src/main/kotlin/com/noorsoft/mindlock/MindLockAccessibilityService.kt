@@ -27,6 +27,7 @@ class MindLockAccessibilityService : AccessibilityService() {
     private var lastStudyModeToastTime = 0L
     private var lastAppLimitToastTime = 0L
     private var lastAnalysisTime = 0L
+    private var lastSeenMindLockInPlayStoreTime = 0L
 
     // Dynamic Punishment Logic
     data class PunishmentState(
@@ -76,7 +77,8 @@ class MindLockAccessibilityService : AccessibilityService() {
         if (isBlockingActive) return
         
         val isRelevantEvent = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
-                             event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                             event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
+                             event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED
 
         if (!isRelevantEvent) return
 
@@ -204,7 +206,7 @@ class MindLockAccessibilityService : AccessibilityService() {
         if (cachedUninstallProtectionEnabled && packageName.lowercase() != "com.noorsoft.mindlock") {
             val rootNode = rootInActiveWindow
             if (rootNode != null) {
-                if (checkForUninstallAttempt(rootNode, packageName)) {
+                if (checkForUninstallAttempt(rootNode, packageName, event)) {
                     isBlockingActive = true
                     Log.d("MindLock", "Blocked uninstall or deactivate attempt")
                     performGlobalAction(GLOBAL_ACTION_HOME)
@@ -222,6 +224,12 @@ class MindLockAccessibilityService : AccessibilityService() {
             }
         }
         // --- End Uninstall Protection ---
+        
+        // For click events, only uninstall protection needs to inspect them.
+        // Return early so normal user clicks do not trigger Reels/Shorts tree scanning.
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            return
+        }
         
         // --- App Use Limit Blocking ---
         if (cachedAppLimitsEnabled) {
@@ -532,7 +540,8 @@ class MindLockAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.getServiceInfo()?.let { info ->
             info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or 
-                             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
+                             AccessibilityEvent.TYPE_VIEW_CLICKED
             info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             info.notificationTimeout = 100
             serviceInfo = info
@@ -540,7 +549,11 @@ class MindLockAccessibilityService : AccessibilityService() {
         Log.d("MindLock", "Accessibility Service Connected")
     }
 
-    private fun checkForUninstallAttempt(rootNode: AccessibilityNodeInfo, packageName: String): Boolean {
+    private fun checkForUninstallAttempt(
+        rootNode: AccessibilityNodeInfo, 
+        packageName: String, 
+        event: AccessibilityEvent? = null
+    ): Boolean {
         // Fix: Use the package name of the actual window we are inspecting to avoid timing/transition bugs
         val actualPackage = rootNode.packageName?.toString()?.lowercase() ?: packageName.lowercase()
         
@@ -548,9 +561,14 @@ class MindLockAccessibilityService : AccessibilityService() {
         // so we don't accidentally scan our own Uninstall Protection settings.
         if (actualPackage == "com.noorsoft.mindlock") return false
 
+        val isSettings = actualPackage.contains("settings")
+        val isInstaller = actualPackage.contains("installer") || actualPackage.contains("parser") || actualPackage.contains("securitycenter") || actualPackage.contains("package")
+        val isPlayStore = actualPackage.contains("vending")
+
         var hasMindLockText = false
         var hasDangerousAction = false
-        var hasUninstallDialogText = false
+        var hasCancelAction = false
+        var hasUninstallDialogPrompt = false
         var hasCombinedText = false
         
         fun traverse(node: AccessibilityNodeInfo?) {
@@ -559,42 +577,85 @@ class MindLockAccessibilityService : AccessibilityService() {
             val text = node.text?.toString()?.lowercase()?.trim() ?: ""
             val desc = node.contentDescription?.toString()?.lowercase()?.trim() ?: ""
             
-            // Explicit targeted text
-            if (text.contains("uninstall mindlock") || text.contains("uninstall mind lock") ||
-                text.contains("remove mindlock") || text.contains("remove mind lock") ||
-                text.contains("delete mindlock") || text.contains("delete mind lock") ||
-                text.contains("mindlock do you want to uninstall this app") ||
-                text.contains("mindlock uninstall this app")) {
-                hasCombinedText = true
+            val isShortText = text.length <= 70
+            val isShortDesc = desc.length <= 70
+
+            // Explicit targeted text on short prompt labels/dialogs (strictly avoid matching long changelogs, descriptions, or reviews)
+            if (isShortText) {
+                if (text.contains("uninstall mindlock") || text.contains("uninstall mind lock") ||
+                    text.contains("remove mindlock") || text.contains("remove mind lock") ||
+                    text.contains("delete mindlock") || text.contains("delete mind lock") ||
+                    text.contains("mindlock do you want to uninstall") ||
+                    text.contains("mindlock uninstall this app") ||
+                    text.contains("mindlock আনইনস্টল") || text.contains("আনইনস্টল mindlock")) {
+                    hasCombinedText = true
+                }
             }
-            if (desc.contains("uninstall mindlock") || desc.contains("uninstall mind lock") ||
-                desc.contains("remove mindlock") || desc.contains("remove mind lock") ||
-                desc.contains("delete mindlock") || desc.contains("delete mind lock") ||
-                desc.contains("mindlock do you want to uninstall this app") ||
-                desc.contains("mindlock uninstall this app")) {
-                hasCombinedText = true
+            if (isShortDesc) {
+                if (desc.contains("uninstall mindlock") || desc.contains("uninstall mind lock") ||
+                    desc.contains("remove mindlock") || desc.contains("remove mind lock") ||
+                    desc.contains("delete mindlock") || desc.contains("delete mind lock") ||
+                    desc.contains("mindlock do you want to uninstall") ||
+                    desc.contains("mindlock uninstall this app") ||
+                    desc.contains("mindlock আনইনস্টল") || desc.contains("আনইনস্টল mindlock")) {
+                    hasCombinedText = true
+                }
             }
             
             if (text == "mindlock" || text == "mind lock" || 
                 desc == "mindlock" || desc == "mind lock" ||
                 text.contains("mindlock") || text.contains("mind lock")) {
-                // Notice we now allow partial match for mindlock but rely on dialog text for safety
                 hasMindLockText = true
             }
             
-            if (text == "uninstall" || text == "force stop" || text == "deactivate" || 
-                desc == "uninstall" || desc == "force stop" || desc == "deactivate" ||
-                text == "remove" || desc == "remove") {
-                hasDangerousAction = true
+            // Dangerous action button (exact button names, <= 25 chars)
+            if (text.length <= 25) {
+                if (text == "uninstall" || text == "force stop" || text == "deactivate" || 
+                    text == "remove" || text == "disable" ||
+                    text == "আনইনস্টল" || text == "আনইনস্টল করুন") {
+                    hasDangerousAction = true
+                }
+            }
+            if (desc.length <= 25) {
+                if (desc == "uninstall" || desc == "force stop" || desc == "deactivate" || 
+                    desc == "remove" || desc == "disable" ||
+                    desc == "আনইনস্টল" || desc == "আনইনস্টল করুন") {
+                    hasDangerousAction = true
+                }
+            }
+
+            // Cancel action button (present in confirmation dialogs like "Uninstall this app? [Cancel] [Uninstall]")
+            if (text.length <= 20) {
+                if (text == "cancel" || text == "বাতিল" || text == "dismiss" || text == "no") {
+                    hasCancelAction = true
+                }
+            }
+            if (desc.length <= 20) {
+                if (desc == "cancel" || desc == "বাতিল" || desc == "dismiss" || desc == "no") {
+                    hasCancelAction = true
+                }
             }
             
-            if (text.contains("do you want to uninstall") || text.contains("uninstall this app") ||
-                text.contains("uninstall app") || text.contains("delete this app") ||
-                (text.contains("uninstall") && text.contains("?")) ||
-                (text.contains("remove") && text.contains("?")) ||
-                (text.contains("delete") && text.contains("?")) ||
-                desc.contains("do you want to uninstall") || desc.contains("uninstall this app")) {
-                hasUninstallDialogText = true
+            // Uninstall confirmation dialog prompt (short questions like "Uninstall this app?")
+            if (isShortText) {
+                if (text.contains("do you want to uninstall") || text.contains("uninstall this app") ||
+                    text.contains("delete this app") || text.contains("do you want to delete") ||
+                    text.contains("আনইনস্টল করতে চান") || text.contains("অ্যাপ আনইনস্টল") ||
+                    (text.contains("uninstall") && text.contains("?")) ||
+                    (text.contains("remove") && text.contains("?")) ||
+                    (text.contains("delete") && text.contains("?")) ||
+                    (text.contains("আনইনস্টল") && text.contains("?"))) {
+                    hasUninstallDialogPrompt = true
+                }
+            }
+            if (isShortDesc) {
+                if (desc.contains("do you want to uninstall") || desc.contains("uninstall this app") ||
+                    desc.contains("delete this app") || desc.contains("do you want to delete") ||
+                    desc.contains("আনইনস্টল করতে চান") || desc.contains("অ্যাপ আনইনস্টল") ||
+                    (desc.contains("uninstall") && desc.contains("?")) ||
+                    desc.contains("uninstall this app?") || desc.contains("আনইনস্টল করতে চান")) {
+                    hasUninstallDialogPrompt = true
+                }
             }
             
             for (i in 0 until node.childCount) {
@@ -604,30 +665,62 @@ class MindLockAccessibilityService : AccessibilityService() {
         
         traverse(rootNode)
         
-        // Immediate, undeniable signs of uninstallation attempts (bypasses package check)
-        // 1. Explicit targeted uninstall text like "delete mindlock", "uninstall mindlock"
-        if (hasCombinedText) return true
-
-        // For ambiguous cases (like just seeing "MindLock" and "Uninstall" button on the screen), 
-        // we restrict the checks to known system packages (Settings, Installers, PlayStore) 
-        // to prevent false positives in normal apps (like browsers or social media).
-        val isSettings = actualPackage.contains("settings")
-        val isInstaller = actualPackage.contains("installer") || actualPackage.contains("parser") || actualPackage.contains("securitycenter") || actualPackage.contains("package")
-        val isPlayStore = actualPackage.contains("vending")
+        // Immediate signs of targeted uninstallation in third-party launchers/dialogs (excluding Play Store listings)
+        if (!isPlayStore && hasCombinedText) return true
 
         if (!isSettings && !isInstaller && !isPlayStore) {
             return false
         }
 
-        // Scenario 1: In the Settings app or Play Store, blocking access to MindLock's App Info/Details page
-        if ((isSettings || isPlayStore) && hasMindLockText && hasDangerousAction) {
+        // Scenario 1: In the Settings app, blocking access to MindLock's App Info/Details page
+        if (isSettings && hasMindLockText && hasDangerousAction) {
             return true
         }
 
-        // Scenario 2: Standard Package Installers trying to remove MindLock
+        // Scenario 2: In Google Play Store (com.android.vending)
+        // User is completely free to view the store page, read reviews, open "What's new" or "About this app", and update the app.
+        // We block if:
+        //  a) The confirmation prompt is displayed (e.g. "Uninstall this app?") -> Immediately kick out!
+        //  b) The user clicked specifically on the "Uninstall" action button on MindLock's page
+        if (isPlayStore) {
+            if (hasMindLockText) {
+                lastSeenMindLockInPlayStoreTime = System.currentTimeMillis()
+            }
+            val isRecentlyOnMindLock = (System.currentTimeMillis() - lastSeenMindLockInPlayStoreTime) < 60000
+
+            // As explicitly requested: whenever text like "Uninstall this app?" appears in Play Store, kick out immediately!
+            if (hasUninstallDialogPrompt) {
+                return true
+            }
+
+            // Check if user clicked specifically on the "Uninstall" action button
+            val isUninstallClick = if (event != null && event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+                fun isExactUninstall(s: String): Boolean {
+                    val t = s.trim().lowercase()
+                    return t.length <= 25 && (t == "uninstall" || t == "remove" || t == "delete" || 
+                                              t == "আনইনস্টল" || t == "আনইনস্টল করুন" ||
+                                              t == "desinstalar" || t == "désinstaller")
+                }
+
+                val clickedText = event.text?.joinToString(" ") ?: ""
+                val clickedDesc = event.contentDescription?.toString() ?: ""
+                val sourceText = event.source?.text?.toString() ?: ""
+                val sourceDesc = event.source?.contentDescription?.toString() ?: ""
+
+                (isExactUninstall(clickedText) || isExactUninstall(clickedDesc) ||
+                 isExactUninstall(sourceText) || isExactUninstall(sourceDesc)) &&
+                (hasMindLockText || isRecentlyOnMindLock)
+            } else false
+
+            if (isUninstallClick) {
+                return true
+            }
+        }
+
+        // Scenario 3: Standard Package Installers trying to remove MindLock
         if (isInstaller && hasMindLockText) {
             // Installers almost exclusively show uninstall/install dialogs.
-            if (hasDangerousAction || textContainsAnywhere(rootNode, "ok") || textContainsAnywhere(rootNode, "uninstall")) {
+            if (hasDangerousAction || hasUninstallDialogPrompt || textContainsAnywhere(rootNode, "ok") || textContainsAnywhere(rootNode, "uninstall")) {
                 return true
             }
         }

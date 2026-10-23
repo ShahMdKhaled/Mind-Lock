@@ -4,6 +4,7 @@ import '../../../data/models/app_usage_info.dart';
 import '../../../data/repositories/usage_repository.dart';
 import '../../../core/di/service_locator.dart';
 
+// ViewModel for processing app usage statistics and preparing data for the charts
 class StatsViewModel extends BaseViewModel {
   final UsageRepository _usageRepo;
 
@@ -16,6 +17,7 @@ class StatsViewModel extends BaseViewModel {
   StatsViewModel({UsageRepository? usageRepo})
       : _usageRepo = usageRepo ?? getIt<UsageRepository>();
 
+  // Fetches usage data for the current day and the previous 6 days to build a weekly summary
   Future<void> refreshUsage() async {
     setState(ViewState.loading);
     try {

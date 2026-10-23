@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_settings.dart';
 import '../../core/constants.dart';
 
+// Singleton service to persist and retrieve app settings securely using SharedPreferences
 class LocalStorageService {
   static LocalStorageService? _instance;
   static LocalStorageService get instance =>
@@ -20,6 +21,7 @@ class LocalStorageService {
     return _prefs!;
   }
 
+  // Loads all saved configurations and states into an AppSettings object
   Future<AppSettings> loadSettings() async {
     await init();
     final startDateStr =
@@ -68,6 +70,8 @@ class LocalStorageService {
           prefs.getBool(AppConstants.keyUninstallProtectionEnabled) ?? false,
       uninstallProtectionStartDate:
           startDateStr != null ? DateTime.tryParse(startDateStr) : null,
+      uninstallProtectionDurationDays:
+          prefs.getInt(AppConstants.keyUninstallProtectionDurationDays) ?? 30,
       studyModeEnabled:
           prefs.getBool(AppConstants.keyStudyModeEnabled) ?? false,
       studyModeStartTime: prefs.getString(AppConstants.keyStudyModeStartTime),
@@ -90,6 +94,7 @@ class LocalStorageService {
     );
   }
 
+  // Saves the current state of AppSettings into local persistent storage
   Future<void> saveSettings(AppSettings settings) async {
     await prefs.setBool(
         AppConstants.keyReelsBlockerEnabled, settings.reelsBlockerEnabled);
@@ -112,6 +117,8 @@ class LocalStorageService {
       await prefs.setString(AppConstants.keyUninstallProtectionStartDate,
           settings.uninstallProtectionStartDate!.toIso8601String());
     }
+    await prefs.setInt(AppConstants.keyUninstallProtectionDurationDays,
+        settings.uninstallProtectionDurationDays);
     await prefs.setBool(
         AppConstants.keyStudyModeEnabled, settings.studyModeEnabled);
     if (settings.studyModeStartTime != null) {

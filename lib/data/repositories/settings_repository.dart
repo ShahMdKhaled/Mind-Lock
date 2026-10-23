@@ -1,12 +1,14 @@
 import '../models/app_settings.dart';
 import '../services/local_storage_service.dart';
 
+// Repository responsible for saving and retrieving all user configurations and app states
 class SettingsRepository {
   final LocalStorageService _localStorage;
 
   SettingsRepository({required LocalStorageService localStorage})
       : _localStorage = localStorage;
 
+  // Loads all app settings asynchronously from the underlying local storage
   Future<AppSettings> loadSettings() async {
     return await _localStorage.loadSettings();
   }
@@ -23,11 +25,18 @@ class SettingsRepository {
     await _localStorage.prefs.setStringList('reels_blocked_packages', packages);
   }
 
-  Future<void> setUninstallProtection(bool enabled) async {
+  Future<void> setUninstallProtectionDurationDays(int days) async {
+    await _localStorage.setInt('uninstall_protection_duration_days', days);
+  }
+
+  Future<void> setUninstallProtection(bool enabled, [int? durationDays]) async {
     await _localStorage.setBool('uninstall_protection_enabled', enabled);
     if (enabled) {
       await _localStorage.setString(
           'uninstall_protection_start_date', DateTime.now().toIso8601String());
+      if (durationDays != null) {
+        await _localStorage.setInt('uninstall_protection_duration_days', durationDays);
+      }
     }
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../data/models/app_settings.dart';
 
+// Reusable dialog widget that enforces the Strict Mode countdown before allowing users to disable features
 class StrictModeDialog extends StatefulWidget {
   final String featureKey;
   final String featureName;

@@ -7,6 +7,7 @@ import '../../../data/repositories/permission_repository.dart';
 import '../../../data/services/study_mode_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+// ViewModel for managing app configurations, global states, and checking permission statuses
 class SettingsViewModel extends ChangeNotifier {
   final SettingsRepository _settingsRepo;
   final PermissionRepository _permissionRepo;
@@ -40,6 +41,7 @@ class SettingsViewModel extends ChangeNotifier {
     loadSettings();
   }
 
+  // Loads all app settings from local storage and checks the current status of all permissions
   Future<void> loadSettings() async {
     _isLoading = true;
     notifyListeners();
@@ -51,6 +53,7 @@ class SettingsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Interrogates the Android system to verify if each required permission is granted
   Future<void> checkPermissions() async {
     _isUsageGranted = await _permissionRepo.isUsageAccessGranted();
     _isAccessibilityEnabled =
@@ -136,16 +139,27 @@ class SettingsViewModel extends ChangeNotifier {
     return false;
   }
 
-  Future<void> toggleUninstallProtection(bool enabled) async {
+  Future<void> updateUninstallProtectionDurationDays(int days) async {
+    _settings = _settings.copyWith(uninstallProtectionDurationDays: days);
+    await _settingsRepo.setUninstallProtectionDurationDays(days);
+    notifyListeners();
+  }
+
+  Future<void> toggleUninstallProtection(bool enabled, [int? durationDays]) async {
     if (!enabled) {
       final allowed = await requestDisableFeature('uninstall_protection');
       if (!allowed) return;
     }
-    if (enabled) {
-      _settings.uninstallProtectionStartDate = DateTime.now();
-    }
-    _settings = _settings.copyWith(uninstallProtectionEnabled: enabled);
-    await _settingsRepo.setUninstallProtection(enabled);
+    final effectiveDays =
+        durationDays ?? _settings.uninstallProtectionDurationDays;
+    final now = DateTime.now();
+    _settings = _settings.copyWith(
+      uninstallProtectionEnabled: enabled,
+      uninstallProtectionDurationDays: effectiveDays,
+      uninstallProtectionStartDate:
+          enabled ? now : _settings.uninstallProtectionStartDate,
+    );
+    await _settingsRepo.setUninstallProtection(enabled, effectiveDays);
     notifyListeners();
   }
 

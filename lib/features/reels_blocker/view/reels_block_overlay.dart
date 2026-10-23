@@ -6,6 +6,7 @@ import '../../../core/theme.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Full-screen overlay UI displayed by the accessibility service when a reel or short is blocked
 class ReelsBlockOverlay extends StatefulWidget {
   const ReelsBlockOverlay({super.key});
 
